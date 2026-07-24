@@ -284,6 +284,18 @@ export async function submitExamAttempt(attemptId, questions, postedAnswers) {
 }
 
 /* =======================================
+   حذف الطالب (المحاولة) نهائياً
+======================================= */
+export async function deleteAttempt(attemptId) {
+  const { error } = await supabase
+    .from("attempts")
+    .delete()
+    .eq("id", attemptId);
+  if (error) throw error;
+  return true;
+}
+
+/* =======================================
    نظام اختيار الأنشطة
 ======================================= */
 export function getPackageCategories() {
@@ -374,7 +386,7 @@ export async function getPackageSelections(attemptId) {
 }
 
 /* =======================================
-   لوحة الإدارة
+   لوحة الإدارة (مع دعم البحث بالإسم أو الرقم)
 ======================================= */
 export async function countAttemptsByPassFail(
   passFail,
@@ -382,6 +394,7 @@ export async function countAttemptsByPassFail(
   filterItem = null,
   filterChurch = null,
   filterExamId = null,
+  searchQuery = null,
 ) {
   let query = supabase
     .from("attempts")
@@ -394,6 +407,11 @@ export async function countAttemptsByPassFail(
 
   if (filterExamId && String(filterExamId).trim() !== "") {
     query = query.eq("exam_id", Number(filterExamId));
+  }
+
+  if (searchQuery && searchQuery.trim() !== "") {
+    const q = searchQuery.trim();
+    query = query.or(`user_name.ilike.%${q}%,user_phone.ilike.%${q}%`);
   }
 
   if (filterCategory && filterItem) {
@@ -423,6 +441,7 @@ export async function getAttemptsByPassFail(
   filterExamId = null,
   limit = 50,
   offset = 0,
+  searchQuery = null,
 ) {
   let idFilter = null;
   if (filterCategory && filterItem) {
@@ -449,6 +468,11 @@ export async function getAttemptsByPassFail(
 
   if (filterExamId && String(filterExamId).trim() !== "") {
     query = query.eq("exam_id", Number(filterExamId));
+  }
+
+  if (searchQuery && searchQuery.trim() !== "") {
+    const q = searchQuery.trim();
+    query = query.or(`user_name.ilike.%${q}%,user_phone.ilike.%${q}%`);
   }
 
   if (idFilter) {
