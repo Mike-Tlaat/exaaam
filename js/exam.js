@@ -1,5 +1,4 @@
-// exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
-// تم حذف نظام مكافحة الغش بالكامل: لا مراقبة لتبديل التبويبات ولا حالة "cheated"
+// js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
 
 import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM, PACKAGE_CATEGORIES } from "../includes/config.js";
 import {
@@ -36,6 +35,7 @@ function escapeHtml(str) {
 }
 
 const attemptStorageKey = (examId) => `attempt_id_${examId}`;
+const timerStartStorageKey = (attId) => `exam_start_time_ms_${attId}`;
 
 let currentExam = null;
 let currentAttempt = null;
@@ -135,7 +135,7 @@ function showRegistration() {
   const errorBox = document.getElementById("registrationError");
   const errorText = document.getElementById("registrationErrorText");
 
-  form.addEventListener("submit", async (e) => {
+  form.onsubmit = async (e) => {
     e.preventDefault();
     errorBox.classList.add("hidden");
 
@@ -175,7 +175,7 @@ function showRegistration() {
       errorBox.classList.remove("hidden");
       submitBtn.disabled = false;
     }
-  });
+  };
 }
 
 /* =======================================
@@ -258,7 +258,6 @@ async function showPackages() {
   }
   sportsToggle.addEventListener("change", updateSportsVisibility);
 
-  // حد أقصى 3 أنشطة (بدون احتساب خانة المسابقات الرياضية)
   activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle)').forEach((input) => {
     input.addEventListener("change", (e) => {
       const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle):checked').length;
@@ -272,7 +271,6 @@ async function showPackages() {
     });
   });
 
-  // لعبة واحدة فردي + لعبة واحدة جماعي كحد أقصى (كل قسم بحد أقصى واحد)
   [individualCard, teamCard].forEach((card) => {
     card.querySelectorAll("input").forEach((input) => {
       input.addEventListener("change", (e) => {
@@ -290,7 +288,7 @@ async function showPackages() {
     });
   });
 
-  document.getElementById("reviewPackagesBtn").addEventListener("click", () => {
+  document.getElementById("reviewPackagesBtn").onclick = () => {
     const selections = collectSelections(container);
     const summaryHtml = Object.entries(selections)
       .map(([cat, items]) => `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(cat)}:</strong> ${items.length ? items.map(escapeHtml).join("، ") : "لم يتم الاختيار"}</div>`)
@@ -306,12 +304,15 @@ async function showPackages() {
       onConfirm: async () => {
         const sportsEnabled = sportsToggle.checked;
         await savePackageSelections(currentAttempt.id, selections, sportsEnabled);
-        await ensureExamStarted(currentAttempt.id);
+        const startedAt = await ensureExamStarted(currentAttempt.id);
         currentAttempt = await getAttempt(currentAttempt.id);
+        if (startedAt && !currentAttempt.exam_started_at) {
+          currentAttempt.exam_started_at = startedAt;
+        }
         startExam();
       },
     });
-  });
+  };
 }
 
 function optionHtml(category, item) {
@@ -350,8 +351,11 @@ async function startExam() {
   showScreen("exam");
   attemptId = currentAttempt.id;
 
-  await ensureExamStarted(attemptId);
+  const startedAt = await ensureExamStarted(attemptId);
   currentAttempt = await getAttempt(attemptId);
+  if (startedAt && !currentAttempt.exam_started_at) {
+    currentAttempt.exam_started_at = startedAt;
+  }
 
   questions = (await loadQuestions(currentExam.json_file)) || [];
 
@@ -359,7 +363,6 @@ async function startExam() {
   document.getElementById("userNameTag").textContent = currentAttempt.user_name;
   document.getElementById("userPhoneTag").textContent = currentAttempt.user_phone;
 
-  // استرجاع أي إجابات محفوظة محلياً
   try {
     answers = JSON.parse(localStorage.getItem(answersStorageKey())) || {};
   } catch {
@@ -370,7 +373,8 @@ async function startExam() {
   evaluateProgress();
   startTimer();
 
-  document.getElementById("submitExamBtn").addEventListener("click", () => validateAndSubmit(false));
+  const submitBtn = document.getElementById("submitExamBtn");
+  submitBtn.onclick = () => validateAndSubmit(false);
 }
 
 function renderQuestions() {
@@ -434,7 +438,6 @@ function renderQuestions() {
     })
     .join("");
 
-  // ربط الأحداث
   container.querySelectorAll('input[type="radio"]').forEach((input) => {
     input.addEventListener("change", () => {
       const index = input.dataset.index;
@@ -490,35 +493,68 @@ function evaluateProgress() {
 }
 
 /* =======================================
-   المؤقت (تم الإصلاح لمنع الإغلاق المباشر)
+   المؤقت الآمن والحل الفعلي للثغرة
 ======================================= */
-function startTimer() {
-  const base = currentAttempt ? (currentAttempt.exam_started_at || currentAttempt.start_time) : null;
-  let parsedTime = base ? new Date(base).getTime() : NaN;
-
-  // إذا كانت القيمة غير صالحة أو فارغة أو تساوي 0، استخدم الوقت الحالي فوراً
-  if (isNaN(parsedTime) || parsedTime <= 0) {
-    parsedTime = Date.now();
+function parseUtcToMs(tsStr) {
+  if (!tsStr) return null;
+  let str = String(tsStr).trim();
+  if (!str.includes("T")) str = str.replace(" ", "T");
+  if (!str.endsWith("Z") && !str.includes("+") && !str.includes("-", 10)) {
+    str += "Z";
   }
+  const ms = new Date(str).getTime();
+  return isNaN(ms) ? null : ms;
+}
 
-  examStartedAtMs = parsedTime;
+function startTimer() {
   const timerEl = document.getElementById("timer");
   const timerContainer = document.getElementById("timerContainer");
+  const durationSeconds = Number(EXAM_DURATION_SECONDS) || 1800;
+
+  const timerKey = timerStartStorageKey(attemptId);
+  let startMs = null;
+
+  // 1. الفحص من التخزين المحلي للمحاولة الحالية أولاً
+  const localSaved = localStorage.getItem(timerKey);
+  if (localSaved && !isNaN(Number(localSaved))) {
+    startMs = Number(localSaved);
+  }
+
+  // 2. الفحص من قاعدة البيانات مع التأكد من مطابقة صيغة UTC
+  if (!startMs && currentAttempt && currentAttempt.exam_started_at) {
+    const dbMs = parseUtcToMs(currentAttempt.exam_started_at);
+    if (dbMs && Date.now() - dbMs < durationSeconds * 1000) {
+      startMs = dbMs;
+    }
+  }
+
+  // 3. إن لم يوجد توقيت سابق صالح، نعتبر اللحظة الحالية هي البداية
+  if (!startMs || isNaN(startMs)) {
+    startMs = Date.now();
+  }
+
+  localStorage.setItem(timerKey, String(startMs));
+  examStartedAtMs = startMs;
 
   function tick() {
-    const elapsed = Math.floor((Date.now() - examStartedAtMs) / 1000);
-    const remaining = Math.max(0, EXAM_DURATION_SECONDS - elapsed);
+    const elapsedSeconds = Math.floor((Date.now() - examStartedAtMs) / 1000);
+    const remainingSeconds = Math.max(0, durationSeconds - elapsedSeconds);
 
-    if (remaining <= 0) {
+    if (remainingSeconds <= 0) {
       timerEl.textContent = "00:00";
       clearInterval(timerInterval);
       submitExam(true);
       return;
     }
-    if (remaining <= 120) timerContainer.classList.add("critical");
 
-    const mins = String(Math.floor(remaining / 60)).padStart(2, "0");
-    const secs = String(remaining % 60).padStart(2, "0");
+    if (remainingSeconds <= 120) {
+      timerContainer.classList.add("critical");
+    } else {
+      timerContainer.classList.remove("critical");
+    }
+
+    const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
+    const secs = String(remainingSeconds % 60).padStart(2, "0");
     timerEl.textContent = `${mins}:${secs}`;
   }
 
@@ -569,7 +605,7 @@ function validateAndSubmit(isTimeOut) {
 }
 
 async function submitExam(isTimeOut) {
-  clearInterval(timerInterval);
+  if (timerInterval) clearInterval(timerInterval);
   const submitBtn = document.getElementById("submitExamBtn");
   submitBtn.disabled = true;
   submitBtn.textContent = "جاري التسليم...";
@@ -578,6 +614,7 @@ async function submitExam(isTimeOut) {
     await submitExamAttempt(attemptId, questions, answers);
     localStorage.removeItem(answersStorageKey());
     localStorage.removeItem(attemptStorageKey(currentExam.id));
+    localStorage.removeItem(timerStartStorageKey(attemptId));
     window.location.href = `results.html?attempt=${attemptId}`;
   } catch (err) {
     submitBtn.disabled = false;
