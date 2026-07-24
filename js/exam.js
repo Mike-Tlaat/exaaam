@@ -1,6 +1,6 @@
 // js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
 
-import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM, PACKAGE_CATEGORIES } from "../includes/config.js";
+import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM, PACKAGE_CATEGORIES } from "../includes/config.js?v=2.0.0";
 import {
   getExamBySlug,
   getExamById,
@@ -12,7 +12,22 @@ import {
   savePackageSelections,
   loadQuestions,
   submitExamAttempt,
-} from "../includes/functions.js";
+} from "../includes/functions.js?v=2.0.0";
+
+// =======================================
+// آلية التحديث التلقائي للنسخة (Cache Control)
+// =======================================
+const CURRENT_APP_VERSION = "2.0.0";
+(function checkAppVersion() {
+  const savedVersion = localStorage.getItem("app_sys_version");
+  if (savedVersion !== CURRENT_APP_VERSION) {
+    localStorage.setItem("app_sys_version", CURRENT_APP_VERSION);
+    // إجبار المتصفح على إعادة تحميل الملفات الحديثة من السيرفر فوراً
+    if (savedVersion) {
+      window.location.reload(true);
+    }
+  }
+})();
 
 const qs = new URLSearchParams(location.search);
 const rawParam = (qs.get("slug") || qs.get("exam") || qs.get("id") || "").trim();
@@ -25,8 +40,8 @@ const screens = {
 };
 
 function showScreen(name) {
-  Object.values(screens).forEach((el) => el.classList.add("hidden"));
-  screens[name].classList.remove("hidden");
+  Object.values(screens).forEach((el) => el?.classList.add("hidden"));
+  screens[name]?.classList.remove("hidden");
 }
 
 function escapeHtml(str) {
@@ -39,6 +54,7 @@ const attemptStorageKey = (examId) => `attempt_id_${examId}`;
 
 let currentExam = null;
 let currentAttempt = null;
+let isSubmittingLock = false; // قفل يمنع الضغط المتعدد من نفس الجهاز
 
 /* =======================================
    المودال المشترك
@@ -51,6 +67,7 @@ const modalSummary = document.getElementById("modalSummary");
 const modalButtons = document.getElementById("modalButtons");
 
 function showModal({ type = "alert", title, text = "", summaryHtml = null, confirmText = "حسناً", cancelText = "إلغاء", onConfirm = null, onCancel = null }) {
+  if (!modalOverlay) return;
   modalTitle.textContent = title;
   modalText.textContent = text;
   modalText.classList.toggle("hidden", !text);
@@ -109,7 +126,6 @@ async function init() {
     console.error("❌ خطأ أثناء الاتصال بقاعدة البيانات:", err);
   }
 
-  // إذا كان الامتحان غير موجود أو مغلقاً من الإدارة
   if (!currentExam || currentExam.is_open === false) {
     showNotFoundMessage(`الامتحان المطلوب غير موجود حالياً أو متوقف.`);
     return;
@@ -166,7 +182,7 @@ function showRegistration() {
   const errorBox = document.getElementById("registrationError");
   const errorText = document.getElementById("registrationErrorText");
 
-  form.addEventListener("submit", async (e) => {
+  form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorBox.classList.add("hidden");
 
@@ -319,7 +335,7 @@ async function showPackages() {
     });
   });
 
-  document.getElementById("reviewPackagesBtn").addEventListener("click", () => {
+  document.getElementById("reviewPackagesBtn")?.addEventListener("click", () => {
     const selections = collectSelections(container);
     const summaryHtml = Object.entries(selections)
       .map(([cat, items]) => `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(cat)}:</strong> ${items.length ? items.map(escapeHtml).join("، ") : "لم يتم الاختيار"}</div>`)
@@ -399,7 +415,7 @@ async function startExam() {
   evaluateProgress();
   startTimer();
 
-  document.getElementById("submitExamBtn").addEventListener("click", () => validateAndSubmit(false));
+  document.getElementById("submitExamBtn")?.addEventListener("click", () => validateAndSubmit(false));
 }
 
 function renderQuestions() {
@@ -513,8 +529,10 @@ function evaluateProgress() {
   });
   const total = questions.length;
   const pct = total > 0 ? (answeredCount / total) * 100 : 0;
-  document.getElementById("progressBar").style.width = pct + "%";
-  document.getElementById("progressText").textContent = `تم حل ${answeredCount} من أصل ${total} أسئلة`;
+  const bar = document.getElementById("progressBar");
+  const text = document.getElementById("progressText");
+  if (bar) bar.style.width = pct + "%";
+  if (text) text.textContent = `تم حل ${answeredCount} من أصل ${total} أسئلة`;
 }
 
 /* =======================================
@@ -564,17 +582,17 @@ function startTimer() {
     const remaining = Math.max(0, durationSec - elapsed);
 
     if (remaining <= 0) {
-      timerEl.textContent = "00:00";
+      if (timerEl) timerEl.textContent = "00:00";
       if (timerInterval) clearInterval(timerInterval);
       submitExam(true);
       return;
     }
 
-    if (remaining <= 120) timerContainer.classList.add("critical");
+    if (remaining <= 120 && timerContainer) timerContainer.classList.add("critical");
 
     const mins = String(Math.floor(remaining / 60)).padStart(2, "0");
     const secs = String(remaining % 60).padStart(2, "0");
-    timerEl.textContent = `${mins}:${secs}`;
+    if (timerEl) timerEl.textContent = `${mins}:${secs}`;
   }
 
   if (timerInterval) clearInterval(timerInterval);
@@ -583,9 +601,11 @@ function startTimer() {
 }
 
 /* =======================================
-   التسليم
+   التسليم ونظام الطابور التتابعي (Queue Engine)
 ======================================= */
 function validateAndSubmit(isTimeOut) {
+  if (isSubmittingLock) return; // منع الضغط المزدوج
+
   if (isTimeOut) {
     submitExam(true);
     return;
@@ -601,8 +621,8 @@ function validateAndSubmit(isTimeOut) {
   if (firstUnanswered !== null) {
     document.querySelectorAll(".question-card").forEach((c) => c.classList.remove("highlight-error"));
     const card = document.getElementById(`q_card_${firstUnanswered}`);
-    card.classList.add("highlight-error");
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card?.classList.add("highlight-error");
+    card?.scrollIntoView({ behavior: "smooth", block: "center" });
 
     showModal({
       type: "alert",
@@ -624,26 +644,89 @@ function validateAndSubmit(isTimeOut) {
 }
 
 async function submitExam(isTimeOut) {
+  if (isSubmittingLock) return;
+  isSubmittingLock = true;
+
   if (timerInterval) clearInterval(timerInterval);
+  
   const submitBtn = document.getElementById("submitExamBtn");
+  const errorBox = document.getElementById("submitErrorBox");
+
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.textContent = "جاري التسليم...";
+    submitBtn.textContent = "جاري حجز دورك في طابور التسليم...";
+  }
+  if (errorBox) errorBox.classList.add("hidden");
+
+  /* -------------------------------------------------------------
+     🔥 خوارزمية الطابور والتتابع (Submission Staggering Queue):
+     تمنع تصادم الطلبات عند تسليم 1500 طالب في نفس الملي ثانية.
+     تُعطي كل طالب شريحة زَمَنية (Time Slot) بناءً على رقم محاولته (Attempt ID).
+  ------------------------------------------------------------- */
+  const baseSlot = (Number(attemptId) % 60) * 150; // تقسيم الطلاب على 60 شريحة زَمَنية (150ms بين كل شريحة)
+  const randomJitter = Math.floor(Math.random() * 250); // عشوائية لمنع تزامن نفس الشريحة
+  const calculatedQueueDelay = isTimeOut ? baseSlot + randomJitter : randomJitter;
+
+  if (calculatedQueueDelay > 0) {
+    await new Promise((res) => setTimeout(res, calculatedQueueDelay));
   }
 
-  try {
-    await submitExamAttempt(attemptId, questions, postedAnswers);
+  if (submitBtn) {
+    submitBtn.textContent = "جاري إرسال إجاباتك ولحفظ النتائج...";
+  }
+
+  /* -------------------------------------------------------------
+     🔄 آلية المحاولة التلقائية عند الضغط العالي (Exponential Retry)
+  ------------------------------------------------------------- */
+  const maxRetries = 5;
+  let attempt = 0;
+  let success = false;
+
+  while (attempt < maxRetries && !success) {
+    try {
+      // ✅ تم استخدام المتغير الصحيح answers
+      await submitExamAttempt(attemptId, questions, answers);
+      success = true;
+    } catch (err) {
+      attempt++;
+      console.warn(`⚠️ السيرفر مشغول، إعادة المحاولة (${attempt}/${maxRetries})...`, err);
+
+      if (attempt < maxRetries) {
+        if (submitBtn) {
+          submitBtn.textContent = `السيرفر مكتظ، جاري إرسال إجاباتك تلقائياً (محاولة ${attempt}/${maxRetries})...`;
+        }
+        // انتظار تصاعدي مضاف إليه عشوائية لتخفيف الحمل عن السيرفر
+        const retryDelay = Math.pow(2, attempt) * 800 + Math.floor(Math.random() * 400);
+        await new Promise((res) => setTimeout(res, retryDelay));
+      }
+    }
+  }
+
+  // 3. المعالجة النهائية
+  if (success) {
     localStorage.removeItem(answersStorageKey());
     localStorage.removeItem(attemptStorageKey(currentExam.id));
     localStorage.removeItem(`timer_start_ms_${attemptId}`);
+    
     window.location.href = `results.html?attempt=${attemptId}`;
-  } catch (err) {
+  } else {
+    isSubmittingLock = false; // فك القفل للسماح بإعادة المحاولة اليدوية
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = "إنهاء وتسليم الامتحان";
+      submitBtn.textContent = "🔄 إعادة محاولة التسليم الآن";
     }
-    document.getElementById("submitErrorBox").textContent = "حدث خطأ غير متوقع أثناء حفظ الامتحان، حاول مرة أخرى.";
-    document.getElementById("submitErrorBox").classList.remove("hidden");
+    
+    if (errorBox) {
+      errorBox.textContent = "⚠️ يوجد ضغط شديد جداً على الشبكة، ولكن إجاباتك محفوظة بأمان على جهازك! انقر على زر 'إعادة محاولة التسليم' بالأسفل.";
+      errorBox.classList.remove("hidden");
+    }
+
+    showModal({
+      type: "alert",
+      title: "⚠️ تم حفظ إجاباتك محلياً",
+      text: "إجاباتك محفوظة تماماً على هاتفك/جهازك ولن تضيع. يرجى الضغط على زر إعادة محاولة التسليم لإكمال الحفظ.",
+      confirmText: "حسناً، فهمت",
+    });
   }
 }
 
