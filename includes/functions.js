@@ -40,6 +40,17 @@ export async function getAllExams() {
   return data || [];
 }
 
+export async function updateExamStatus(examId, isOpen) {
+  const { data, error } = await supabase
+    .from("exams")
+    .update({ is_open: isOpen })
+    .eq("id", examId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 /* =======================================
    تحميل الأسئلة من ملف JSON
 ======================================= */
@@ -452,7 +463,6 @@ export async function getAttemptsByPassFail(
     return [];
   }
 
-  // مطابقة أسماء الامتحانات بأمان دون استخدام العلاقات المباشرة المقيدة
   const examsList = await getAllExams();
   const examMap = {};
   examsList.forEach((e) => (examMap[e.id] = e.name));
