@@ -1,11 +1,7 @@
-// js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
+// exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
+// تم حذف نظام مكافحة الغش بالكامل: لا مراقبة لتبديل التبويبات ولا حالة "cheated"
 
-import {
-  EXAM_DURATION_SECONDS,
-  MAX_ACTIVITIES,
-  SPORTS_TOGGLE_ITEM,
-  PACKAGE_CATEGORIES,
-} from "../includes/config.js";
+import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM, PACKAGE_CATEGORIES } from "../includes/config.js";
 import {
   getExamBySlug,
   getAttempt,
@@ -19,7 +15,7 @@ import {
 } from "../includes/functions.js";
 
 const qs = new URLSearchParams(location.search);
-const slug = qs.get("slug") || "";
+const slug = qs.get("exam") || "";
 
 const screens = {
   loading: document.getElementById("loadingScreen"),
@@ -40,7 +36,6 @@ function escapeHtml(str) {
 }
 
 const attemptStorageKey = (examId) => `attempt_id_${examId}`;
-const timerStartStorageKey = (attId) => `exam_start_time_ms_${attId}`;
 
 let currentExam = null;
 let currentAttempt = null;
@@ -55,16 +50,7 @@ const modalText = document.getElementById("modalText");
 const modalSummary = document.getElementById("modalSummary");
 const modalButtons = document.getElementById("modalButtons");
 
-function showModal({
-  type = "alert",
-  title,
-  text = "",
-  summaryHtml = null,
-  confirmText = "حسناً",
-  cancelText = "إلغاء",
-  onConfirm = null,
-  onCancel = null,
-}) {
+function showModal({ type = "alert", title, text = "", summaryHtml = null, confirmText = "حسناً", cancelText = "إلغاء", onConfirm = null, onCancel = null }) {
   modalTitle.textContent = title;
   modalText.textContent = text;
   modalText.classList.toggle("hidden", !text);
@@ -76,17 +62,8 @@ function showModal({
     modalSummary.classList.add("hidden");
   }
 
-  modalIcon.className =
-    "modal-icon-wrapper " +
-    (type === "alert"
-      ? "alert-type"
-      : type === "success"
-        ? "success-type"
-        : "confirm-type");
-  modalIcon.innerHTML =
-    type === "alert"
-      ? '<i class="fa-solid fa-triangle-exclamation"></i>'
-      : '<i class="fa-solid fa-circle-question"></i>';
+  modalIcon.className = "modal-icon-wrapper " + (type === "alert" ? "alert-type" : type === "success" ? "success-type" : "confirm-type");
+  modalIcon.innerHTML = type === "alert" ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-circle-question"></i>';
 
   modalButtons.innerHTML = "";
   if (type === "confirm") {
@@ -116,26 +93,20 @@ function showModal({
 ======================================= */
 async function init() {
   if (!slug) {
-    document.body.innerHTML =
-      "<p style='padding:2rem;text-align:center;color:#fff;'>الامتحان غير موجود</p>";
+    document.body.innerHTML = "<p style='padding:2rem;text-align:center;color:#fff;'>الامتحان غير موجود</p>";
     return;
   }
 
   currentExam = await getExamBySlug(slug);
   if (!currentExam) {
-    document.body.innerHTML =
-      "<p style='padding:2rem;text-align:center;color:#fff;'>الامتحان غير موجود</p>";
+    document.body.innerHTML = "<p style='padding:2rem;text-align:center;color:#fff;'>الامتحان غير موجود</p>";
     return;
   }
 
   const savedId = localStorage.getItem(attemptStorageKey(currentExam.id));
   if (savedId) {
     const attempt = await getAttempt(Number(savedId));
-    if (
-      attempt &&
-      attempt.exam_id === currentExam.id &&
-      attempt.status === "pending"
-    ) {
+    if (attempt && attempt.exam_id === currentExam.id && attempt.status === "pending") {
       currentAttempt = attempt;
     } else {
       localStorage.removeItem(attemptStorageKey(currentExam.id));
@@ -164,7 +135,7 @@ function showRegistration() {
   const errorBox = document.getElementById("registrationError");
   const errorText = document.getElementById("registrationErrorText");
 
-  form.onsubmit = async (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorBox.classList.add("hidden");
 
@@ -189,18 +160,14 @@ function showRegistration() {
     try {
       const used = await checkExistingAttempt(currentExam.id, phone);
       if (used) {
-        errorText.textContent =
-          "⚠️ عذراً، هذا الحساب أو رقم الهاتف تم استخدامه لأداء الامتحان مسبقاً.";
+        errorText.textContent = "⚠️ عذراً، هذا الحساب أو رقم الهاتف تم استخدامه لأداء الامتحان مسبقاً.";
         errorBox.classList.remove("hidden");
         submitBtn.disabled = false;
         return;
       }
 
       const attempt = await createAttempt(currentExam.id, name, church, phone);
-      localStorage.setItem(
-        attemptStorageKey(currentExam.id),
-        String(attempt.id),
-      );
+      localStorage.setItem(attemptStorageKey(currentExam.id), String(attempt.id));
       currentAttempt = attempt;
       showPackages();
     } catch (err) {
@@ -208,7 +175,7 @@ function showRegistration() {
       errorBox.classList.remove("hidden");
       submitBtn.disabled = false;
     }
-  };
+  });
 }
 
 /* =======================================
@@ -219,9 +186,7 @@ async function showPackages() {
   const packages = await loadPackages();
   const container = document.getElementById("packagesContainer");
 
-  const activityItems = (packages["أنشطة"] || []).filter(
-    (v) => v !== SPORTS_TOGGLE_ITEM,
-  );
+  const activityItems = (packages["أنشطة"] || []).filter((v) => v !== SPORTS_TOGGLE_ITEM);
   const individualItems = packages["اللعب الفردي"] || [];
   const teamItems = packages["اللعب الجماعي"] || [];
 
@@ -252,9 +217,7 @@ async function showPackages() {
       <div class="pkg-options">
         ${
           individualItems.length
-            ? individualItems
-                .map((item) => optionHtml("اللعب الفردي", item))
-                .join("")
+            ? individualItems.map((item) => optionHtml("اللعب الفردي", item)).join("")
             : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً في هذا القسم.</div>`
         }
       </div>
@@ -268,18 +231,14 @@ async function showPackages() {
       <div class="pkg-options">
         ${
           teamItems.length
-            ? teamItems
-                .map((item) => optionHtml("اللعب الجماعي", item))
-                .join("")
+            ? teamItems.map((item) => optionHtml("اللعب الجماعي", item)).join("")
             : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً في هذا القسم.</div>`
         }
       </div>
     </div>
   `;
 
-  const activitiesCard = container.querySelector(
-    '.pkg-card[data-category="أنشطة"]',
-  );
+  const activitiesCard = container.querySelector('.pkg-card[data-category="أنشطة"]');
   const individualCard = document.getElementById("individualCard");
   const teamCard = document.getElementById("teamCard");
   const sportsToggle = document.getElementById("sportsToggle");
@@ -299,30 +258,21 @@ async function showPackages() {
   }
   sportsToggle.addEventListener("change", updateSportsVisibility);
 
-  activitiesCard
-    .querySelectorAll('input[type="checkbox"]:not(#sportsToggle)')
-    .forEach((input) => {
-      input.addEventListener("change", (e) => {
-        const checkedCount = activitiesCard.querySelectorAll(
-          'input[type="checkbox"]:not(#sportsToggle):checked',
-        ).length;
-        if (checkedCount > MAX_ACTIVITIES) {
-          e.target.checked = false;
-          e.target.closest(".pkg-option")?.classList.remove("selected-active");
-          showModal({
-            type: "alert",
-            title: "⚠️ الحد الأقصى للأنشطة",
-            confirmText: "حسناً، فهمت",
-            text: `لا يمكنك اختيار أكثر من ${MAX_ACTIVITIES} أنشطة فقط. يرجى إلغاء أحد الأنشطة المحددة أولاً.`,
-          });
-        } else {
-          e.target
-            .closest(".pkg-option")
-            ?.classList.toggle("selected-active", e.target.checked);
-        }
-      });
+  // حد أقصى 3 أنشطة (بدون احتساب خانة المسابقات الرياضية)
+  activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle)').forEach((input) => {
+    input.addEventListener("change", (e) => {
+      const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle):checked').length;
+      if (checkedCount > MAX_ACTIVITIES) {
+        e.target.checked = false;
+        e.target.closest(".pkg-option")?.classList.remove("selected-active");
+        showModal({ type: "alert", title: "⚠️ الحد الأقصى للأنشطة", confirmText: "حسناً، فهمت", text: `لا يمكنك اختيار أكثر من ${MAX_ACTIVITIES} أنشطة فقط. يرجى إلغاء أحد الأنشطة المحددة أولاً.` });
+      } else {
+        e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
+      }
     });
+  });
 
+  // لعبة واحدة فردي + لعبة واحدة جماعي كحد أقصى (كل قسم بحد أقصى واحد)
   [individualCard, teamCard].forEach((card) => {
     card.querySelectorAll("input").forEach((input) => {
       input.addEventListener("change", (e) => {
@@ -335,20 +285,15 @@ async function showPackages() {
             }
           });
         }
-        e.target
-          .closest(".pkg-option")
-          ?.classList.toggle("selected-active", e.target.checked);
+        e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
       });
     });
   });
 
-  document.getElementById("reviewPackagesBtn").onclick = () => {
+  document.getElementById("reviewPackagesBtn").addEventListener("click", () => {
     const selections = collectSelections(container);
     const summaryHtml = Object.entries(selections)
-      .map(
-        ([cat, items]) =>
-          `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(cat)}:</strong> ${items.length ? items.map(escapeHtml).join("، ") : "لم يتم الاختيار"}</div>`,
-      )
+      .map(([cat, items]) => `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(cat)}:</strong> ${items.length ? items.map(escapeHtml).join("، ") : "لم يتم الاختيار"}</div>`)
       .join("");
 
     showModal({
@@ -360,20 +305,13 @@ async function showPackages() {
       onCancel: () => {},
       onConfirm: async () => {
         const sportsEnabled = sportsToggle.checked;
-        await savePackageSelections(
-          currentAttempt.id,
-          selections,
-          sportsEnabled,
-        );
-        const startedAt = await ensureExamStarted(currentAttempt.id);
+        await savePackageSelections(currentAttempt.id, selections, sportsEnabled);
+        await ensureExamStarted(currentAttempt.id);
         currentAttempt = await getAttempt(currentAttempt.id);
-        if (startedAt && !currentAttempt.exam_started_at) {
-          currentAttempt.exam_started_at = startedAt;
-        }
         startExam();
       },
     });
-  };
+  });
 }
 
 function optionHtml(category, item) {
@@ -412,19 +350,16 @@ async function startExam() {
   showScreen("exam");
   attemptId = currentAttempt.id;
 
-  const startedAt = await ensureExamStarted(attemptId);
+  await ensureExamStarted(attemptId);
   currentAttempt = await getAttempt(attemptId);
-  if (startedAt && !currentAttempt.exam_started_at) {
-    currentAttempt.exam_started_at = startedAt;
-  }
 
   questions = (await loadQuestions(currentExam.json_file)) || [];
 
   document.getElementById("examTitle").textContent = currentExam.name;
   document.getElementById("userNameTag").textContent = currentAttempt.user_name;
-  document.getElementById("userPhoneTag").textContent =
-    currentAttempt.user_phone;
+  document.getElementById("userPhoneTag").textContent = currentAttempt.user_phone;
 
+  // استرجاع أي إجابات محفوظة محلياً
   try {
     answers = JSON.parse(localStorage.getItem(answersStorageKey())) || {};
   } catch {
@@ -435,8 +370,7 @@ async function startExam() {
   evaluateProgress();
   startTimer();
 
-  const submitBtn = document.getElementById("submitExamBtn");
-  submitBtn.onclick = () => validateAndSubmit(false);
+  document.getElementById("submitExamBtn").addEventListener("click", () => validateAndSubmit(false));
 }
 
 function renderQuestions() {
@@ -473,9 +407,7 @@ function renderQuestions() {
         const questionText = escapeHtml(q.question).replace(/\n/g, "<br>");
         bodyHtml = `<div class="question-text">${questionText}</div>`;
 
-        if (
-          ["true_false", "multiple_choice", "location_source"].includes(type)
-        ) {
+        if (["true_false", "multiple_choice", "location_source"].includes(type)) {
           bodyHtml += `<div class="options-list">${(q.options || [])
             .map((opt) => {
               const selected = savedAnswer === opt ? "selected-active" : "";
@@ -502,14 +434,13 @@ function renderQuestions() {
     })
     .join("");
 
+  // ربط الأحداث
   container.querySelectorAll('input[type="radio"]').forEach((input) => {
     input.addEventListener("change", () => {
       const index = input.dataset.index;
       answers[index] = input.value;
       const card = input.closest(".question-card");
-      card
-        .querySelectorAll(".option-item")
-        .forEach((it) => it.classList.remove("selected-active"));
+      card.querySelectorAll(".option-item").forEach((it) => it.classList.remove("selected-active"));
       input.closest(".option-item").classList.add("selected-active");
       persistAndEvaluate();
     });
@@ -544,11 +475,7 @@ function isQuestionAnswered(type, value) {
     if (!Array.isArray(value) || value.length === 0) return false;
     return value.every((v) => String(v ?? "").trim() !== "");
   }
-  return (
-    value !== undefined &&
-    !Array.isArray(value) &&
-    String(value ?? "").trim() !== ""
-  );
+  return value !== undefined && !Array.isArray(value) && String(value ?? "").trim() !== "";
 }
 
 function evaluateProgress() {
@@ -559,70 +486,39 @@ function evaluateProgress() {
   const total = questions.length;
   const pct = total > 0 ? (answeredCount / total) * 100 : 0;
   document.getElementById("progressBar").style.width = pct + "%";
-  document.getElementById("progressText").textContent =
-    `تم حل ${answeredCount} من أصل ${total} أسئلة`;
+  document.getElementById("progressText").textContent = `تم حل ${answeredCount} من أصل ${total} أسئلة`;
 }
 
 /* =======================================
-   المؤقت
+   المؤقت (تم الإصلاح لمنع الإغلاق المباشر)
 ======================================= */
-function parseUtcToMs(tsStr) {
-  if (!tsStr) return null;
-  let str = String(tsStr).trim();
-  if (!str.includes("T")) str = str.replace(" ", "T");
-  if (!str.endsWith("Z") && !str.includes("+") && !str.includes("-", 10)) {
-    str += "Z";
-  }
-  const ms = new Date(str).getTime();
-  return isNaN(ms) ? null : ms;
-}
-
 function startTimer() {
+  const base = currentAttempt ? (currentAttempt.exam_started_at || currentAttempt.start_time) : null;
+  let parsedTime = base ? new Date(base).getTime() : NaN;
+
+  // إذا كانت القيمة غير صالحة أو فارغة أو تساوي 0، استخدم الوقت الحالي فوراً
+  if (isNaN(parsedTime) || parsedTime <= 0) {
+    parsedTime = Date.now();
+  }
+
+  examStartedAtMs = parsedTime;
   const timerEl = document.getElementById("timer");
   const timerContainer = document.getElementById("timerContainer");
-  const durationSeconds = Number(EXAM_DURATION_SECONDS) || 1800;
-
-  const timerKey = timerStartStorageKey(attemptId);
-  let startMs = null;
-
-  const localSaved = localStorage.getItem(timerKey);
-  if (localSaved && !isNaN(Number(localSaved))) {
-    startMs = Number(localSaved);
-  }
-
-  if (!startMs && currentAttempt && currentAttempt.exam_started_at) {
-    const dbMs = parseUtcToMs(currentAttempt.exam_started_at);
-    if (dbMs && Date.now() - dbMs < durationSeconds * 1000) {
-      startMs = dbMs;
-    }
-  }
-
-  if (!startMs || isNaN(startMs)) {
-    startMs = Date.now();
-  }
-
-  localStorage.setItem(timerKey, String(startMs));
-  examStartedAtMs = startMs;
 
   function tick() {
-    const elapsedSeconds = Math.floor((Date.now() - examStartedAtMs) / 1000);
-    const remainingSeconds = Math.max(0, durationSeconds - elapsedSeconds);
+    const elapsed = Math.floor((Date.now() - examStartedAtMs) / 1000);
+    const remaining = Math.max(0, EXAM_DURATION_SECONDS - elapsed);
 
-    if (remainingSeconds <= 0) {
+    if (remaining <= 0) {
       timerEl.textContent = "00:00";
       clearInterval(timerInterval);
       submitExam(true);
       return;
     }
+    if (remaining <= 120) timerContainer.classList.add("critical");
 
-    if (remainingSeconds <= 120) {
-      timerContainer.classList.add("critical");
-    } else {
-      timerContainer.classList.remove("critical");
-    }
-
-    const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
-    const secs = String(remainingSeconds % 60).padStart(2, "0");
+    const mins = String(Math.floor(remaining / 60)).padStart(2, "0");
+    const secs = String(remaining % 60).padStart(2, "0");
     timerEl.textContent = `${mins}:${secs}`;
   }
 
@@ -642,18 +538,13 @@ function validateAndSubmit(isTimeOut) {
 
   let firstUnanswered = null;
   questions.forEach((q, index) => {
-    if (
-      firstUnanswered === null &&
-      !isQuestionAnswered(q.type, answers[index])
-    ) {
+    if (firstUnanswered === null && !isQuestionAnswered(q.type, answers[index])) {
       firstUnanswered = index;
     }
   });
 
   if (firstUnanswered !== null) {
-    document
-      .querySelectorAll(".question-card")
-      .forEach((c) => c.classList.remove("highlight-error"));
+    document.querySelectorAll(".question-card").forEach((c) => c.classList.remove("highlight-error"));
     const card = document.getElementById(`q_card_${firstUnanswered}`);
     card.classList.add("highlight-error");
     card.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -678,7 +569,7 @@ function validateAndSubmit(isTimeOut) {
 }
 
 async function submitExam(isTimeOut) {
-  if (timerInterval) clearInterval(timerInterval);
+  clearInterval(timerInterval);
   const submitBtn = document.getElementById("submitExamBtn");
   submitBtn.disabled = true;
   submitBtn.textContent = "جاري التسليم...";
@@ -687,13 +578,11 @@ async function submitExam(isTimeOut) {
     await submitExamAttempt(attemptId, questions, answers);
     localStorage.removeItem(answersStorageKey());
     localStorage.removeItem(attemptStorageKey(currentExam.id));
-    localStorage.removeItem(timerStartStorageKey(attemptId));
     window.location.href = `results.html?attempt=${attemptId}`;
   } catch (err) {
     submitBtn.disabled = false;
     submitBtn.textContent = "إنهاء وتسليم الامتحان";
-    document.getElementById("submitErrorBox").textContent =
-      "حدث خطأ غير متوقع أثناء حفظ الامتحان، حاول مرة أخرى.";
+    document.getElementById("submitErrorBox").textContent = "حدث خطأ غير متوقع أثناء حفظ الامتحان، حاول مرة أخرى.";
     document.getElementById("submitErrorBox").classList.remove("hidden");
   }
 }
