@@ -1,9 +1,9 @@
-// exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
-// تم حذف نظام مكافحة الغش بالكامل: لا مراقبة لتبديل التبويبات ولا حالة "cheated"
+// js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
 
 import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM, PACKAGE_CATEGORIES } from "../includes/config.js";
 import {
   getExamBySlug,
+  getExamById,
   getAttempt,
   createAttempt,
   checkExistingAttempt,
@@ -15,7 +15,8 @@ import {
 } from "../includes/functions.js";
 
 const qs = new URLSearchParams(location.search);
-const slug = qs.get("exam") || "";
+// 🛠️ تم التعديل هنا لقراءة 'slug' أو 'exam' تجنباً لخطأ عدم العثور على الامتحان
+const slug = qs.get("slug") || qs.get("exam") || "";
 
 const screens = {
   loading: document.getElementById("loadingScreen"),
@@ -97,7 +98,9 @@ async function init() {
     return;
   }
 
-  currentExam = await getExamBySlug(slug);
+  // 🛠️ تم التعديل للبحث بالـ Slug أولاً ثم الـ ID احتياطياً
+  currentExam = (await getExamBySlug(slug)) || (await getExamById(slug));
+
   if (!currentExam) {
     document.body.innerHTML = "<p style='padding:2rem;text-align:center;color:#fff;'>الامتحان غير موجود</p>";
     return;
@@ -258,7 +261,7 @@ async function showPackages() {
   }
   sportsToggle.addEventListener("change", updateSportsVisibility);
 
-  // حد أقصى 3 أنشطة (بدون احتساب خانة المسابقات الرياضية)
+  // حد أقصى 3 أنشطة
   activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle)').forEach((input) => {
     input.addEventListener("change", (e) => {
       const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle):checked').length;
@@ -272,7 +275,7 @@ async function showPackages() {
     });
   });
 
-  // لعبة واحدة فردي + لعبة واحدة جماعي كحد أقصى (كل قسم بحد أقصى واحد)
+  // لعبة واحدة فردي + لعبة واحدة جماعي
   [individualCard, teamCard].forEach((card) => {
     card.querySelectorAll("input").forEach((input) => {
       input.addEventListener("change", (e) => {
@@ -311,7 +314,6 @@ async function showPackages() {
         startExam();
       },
     });
-    // نجعل الزر الأول (المؤكد للدخول) هو زر التأكيد، والثاني هو الإلغاء بترتيب واجهة العرض
   });
 }
 
@@ -360,7 +362,6 @@ async function startExam() {
   document.getElementById("userNameTag").textContent = currentAttempt.user_name;
   document.getElementById("userPhoneTag").textContent = currentAttempt.user_phone;
 
-  // استرجاع أي إجابات محفوظة محلياً (autosave بدون أي استعلامات إضافية لقاعدة البيانات)
   try {
     answers = JSON.parse(localStorage.getItem(answersStorageKey())) || {};
   } catch {
@@ -435,7 +436,6 @@ function renderQuestions() {
     })
     .join("");
 
-  // ربط الأحداث
   container.querySelectorAll('input[type="radio"]').forEach((input) => {
     input.addEventListener("change", () => {
       const index = input.dataset.index;
