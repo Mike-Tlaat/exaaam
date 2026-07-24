@@ -93,7 +93,7 @@ function showModal({ type = "alert", title, text = "", summaryHtml = null, confi
 ======================================= */
 async function init() {
   if (!rawParam) {
-    showNotFoundMessage("لم يتم تحديد امتحان في رابط الصفحة! يرجى الدخول من الصفحة الرئيسية.");
+    showNotFoundMessage("لم يتم تحديد امتحان في رابط الصفحة!");
     return;
   }
 
@@ -144,10 +144,17 @@ function showNotFoundMessage(msg) {
       <i class="fa-solid fa-circle-exclamation" style="font-size: 3rem; color: #ef4444; margin-bottom: 1rem;"></i>
       <h2 style="margin-bottom: 0.5rem;">الامتحان غير موجود</h2>
       <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">${msg}</p>
-      <a href="index.html" style="background: #3b82f6; color: #fff; padding: 0.6rem 1.2rem; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 0.5rem;">
-        <i class="fa-solid fa-house"></i> العودة للصفحة الرئيسية
-      </a>
+      <button id="exitAppBtn" style="background: #ef4444; color: #fff; border: none; padding: 0.65rem 1.4rem; border-radius: 8px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-family: inherit; font-size: 0.95rem;">
+        <i class="fa-solid fa-right-from-bracket"></i> خروج
+      </button>
     </div>`;
+
+  document.getElementById("exitAppBtn")?.addEventListener("click", () => {
+    window.close();
+    setTimeout(() => {
+      window.location.href = "about:blank";
+    }, 100);
+  });
 }
 
 /* =======================================
