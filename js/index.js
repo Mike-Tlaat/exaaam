@@ -1,4 +1,4 @@
-import { getAllExams } from "./includes/functions.js";
+import { getAllExams } from "../includes/functions.js";
 
 function escapeHtml(str) {
   const d = document.createElement("div");
