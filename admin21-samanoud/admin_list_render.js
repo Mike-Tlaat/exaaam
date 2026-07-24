@@ -1,10 +1,10 @@
-// admin_list_render.js
 import {
   loadPackages,
   countAttemptsByPassFail,
   getAttemptsByPassFail,
   getPackageSelectionsBatch,
   getAllExams,
+  deleteAttempt,
 } from "../includes/functions.js";
 import { CHURCHES_LIST } from "../includes/config.js";
 
@@ -29,6 +29,7 @@ export async function renderAdminAttemptsPage(tab) {
   const qs = new URLSearchParams(location.search);
   let page = Math.max(1, Number(qs.get("page") || 1));
 
+  const searchQuery = qs.get("search") || "";
   const filterChurch = qs.get("church") || "";
   const filterExam = qs.get("exam") || "";
   const filterRaw = qs.get("filter") || "";
@@ -47,6 +48,7 @@ export async function renderAdminAttemptsPage(tab) {
     filterItem,
     filterChurch,
     filterExam,
+    searchQuery,
   );
   const failTotal = await countAttemptsByPassFail(
     "fail",
@@ -54,6 +56,7 @@ export async function renderAdminAttemptsPage(tab) {
     filterItem,
     filterChurch,
     filterExam,
+    searchQuery,
   );
 
   const totalCount = tab === "pass" ? passTotal : failTotal;
@@ -69,6 +72,7 @@ export async function renderAdminAttemptsPage(tab) {
     filterExam,
     perPage,
     offset,
+    searchQuery,
   );
   const ids = attempts.map((a) => a.id);
   const selectionsBatch = await getPackageSelectionsBatch(ids);
@@ -111,10 +115,11 @@ export async function renderAdminAttemptsPage(tab) {
     .join("");
 
   const hasActiveFilters = Boolean(
-    filterChurch || filterExam || (filterCategory && filterItem),
+    searchQuery || filterChurch || filterExam || (filterCategory && filterItem),
   );
 
   const activeNotes = [];
+  if (searchQuery) activeNotes.push(`بحث: "${escapeHtml(searchQuery)}"`);
   if (filterChurch) activeNotes.push(`الكنيسة: ${escapeHtml(filterChurch)}`);
   if (filterExam) {
     const exObj = exams.find((e) => String(e.id) === String(filterExam));
@@ -151,18 +156,25 @@ export async function renderAdminAttemptsPage(tab) {
             )
             .join("");
 
+          const safeUserName = escapeHtml(a.user_name).replace(/'/g, "\\'");
+
           return `
-          <tr onclick="toggleRow(${a.id})">
+          <tr onclick="toggleRow(${a.id})" style="cursor:pointer;">
             <td><b>${escapeHtml(a.user_name)}</b></td>
             <td>${escapeHtml(a.user_church)}</td>
-            <td>${escapeHtml(a.user_phone)}</td>
+            <td><a href="tel:${escapeHtml(a.user_phone)}" onclick="event.stopPropagation();" style="color:inherit;text-decoration:none;">${escapeHtml(a.user_phone)}</a></td>
             <td>${escapeHtml(a.exam_name)}</td>
             <td class="pct-pill" style="color:${scoreColor(a.percentage)}; font-weight: bold;">${Number(a.percentage).toFixed(1)}%</td>
             <td>${escapeHtml(a.grade_text || "-")}</td>
-            <td><i class="fa-solid fa-chevron-down"></i></td>
+            <td style="text-align:center;">
+              <button type="button" class="a-delete-btn" title="حذف الطالب نهائياً" onclick="handleDeleteAttempt(event, ${a.id}, '${safeUserName}')">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+            <td style="text-align:center;"><i class="fa-solid fa-chevron-down"></i></td>
           </tr>
           <tr class="a-detail-row" id="detail_${a.id}">
-            <td colspan="7">
+            <td colspan="8">
               <div class="a-detail-grid">
                 <div class="a-detail-box"><div class="t">الدرجة</div><div class="v">${a.total_score} / ${a.total_possible}</div></div>
                 <div class="a-detail-box"><div class="t">حالة المحاولة</div><div class="v">${escapeHtml(a.status)}</div></div>
@@ -189,6 +201,88 @@ export async function renderAdminAttemptsPage(tab) {
   }
 
   app.innerHTML = `
+    <style>
+      /* استايلات التناسق للموبايل وأزرار الحذف والبحث */
+      .a-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-top: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--a-border, #334155);
+      }
+      .a-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 750px;
+      }
+      .a-delete-btn {
+        background: #ef44441f;
+        color: #ef4444;
+        border: 1px solid #ef444440;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .a-delete-btn:hover {
+        background: #ef4444;
+        color: #fff;
+      }
+      .a-filter-bar {
+        background: var(--a-bg-card, #1e293b);
+        padding: 1rem;
+        border-radius: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      .a-filter-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex: 1 1 200px;
+        min-width: 180px;
+      }
+      .a-filter-item input, .a-filter-item select {
+        width: 100%;
+        padding: 0.55rem 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--a-border, #334155);
+        background: var(--a-bg, #0f172a);
+        color: var(--a-text, #f8fafc);
+        font-family: inherit;
+        font-size: 0.85rem;
+      }
+      @media (max-width: 768px) {
+        .a-topbar {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.75rem;
+        }
+        .a-stats-row {
+          grid-template-columns: 1fr !important;
+          gap: 0.5rem !important;
+        }
+        .a-tabs-row {
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .a-tab-btn {
+          width: 100%;
+          justify-content: center;
+        }
+        .a-filter-item {
+          flex: 1 1 100%;
+        }
+        .a-filter-bar button {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    </style>
+
     <div class="a-topbar">
       <div>
         <h1><i class="fa-solid fa-graduation-cap"></i> ${pageTitle}</h1>
@@ -208,8 +302,13 @@ export async function renderAdminAttemptsPage(tab) {
       <a href="failed.html${tabQueryStr}" class="a-tab-btn ${!isPassPage ? "active fail" : ""}"><i class="fa-solid fa-circle-xmark"></i> غير الناجحين (${failTotal})</a>
     </div>
 
-    <form class="a-filter-bar" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-      <div style="display: flex; align-items: center; gap: 0.4rem;">
+    <form class="a-filter-bar" method="GET">
+      <div class="a-filter-item">
+        <label style="font-size:.82rem;color:var(--a-text-soft);font-weight:700;"><i class="fa-solid fa-magnifying-glass"></i> بحث:</label>
+        <input type="text" name="search" value="${escapeHtml(searchQuery)}" placeholder="بالاسم أو رقم الهاتف..." />
+      </div>
+
+      <div class="a-filter-item">
         <label style="font-size:.82rem;color:var(--a-text-soft);font-weight:700;"><i class="fa-solid fa-church"></i> الكنيسة:</label>
         <select name="church">
           <option value="">-- كل الكنائس --</option>
@@ -217,7 +316,7 @@ export async function renderAdminAttemptsPage(tab) {
         </select>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 0.4rem;">
+      <div class="a-filter-item">
         <label style="font-size:.82rem;color:var(--a-text-soft);font-weight:700;"><i class="fa-solid fa-book-open"></i> الامتحان:</label>
         <select name="exam">
           <option value="">-- كل الامتحانات --</option>
@@ -225,7 +324,7 @@ export async function renderAdminAttemptsPage(tab) {
         </select>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 0.4rem;">
+      <div class="a-filter-item">
         <label style="font-size:.82rem;color:var(--a-text-soft);font-weight:700;"><i class="fa-solid fa-filter"></i> النشاط / اللعبة:</label>
         <select name="filter">
           <option value="">-- كل الأنشطة --</option>
@@ -243,18 +342,49 @@ export async function renderAdminAttemptsPage(tab) {
 
     ${
       attempts.length
-        ? `<table class="a-table">
-            <thead><tr><th>الاسم</th><th>الكنيسة</th><th>الهاتف</th><th>الامتحان</th><th>النسبة</th><th>التقدير</th><th></th></tr></thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
+        ? `<div class="a-table-wrapper">
+            <table class="a-table">
+              <thead>
+                <tr>
+                  <th>الاسم</th>
+                  <th>الكنيسة</th>
+                  <th>الهاتف</th>
+                  <th>الامتحان</th>
+                  <th>النسبة</th>
+                  <th>التقدير</th>
+                  <th style="text-align:center;">حذف</th>
+                  <th style="text-align:center;">تفاصيل</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
           ${paginationHtml}`
         : `<div class="a-empty-state"><i class="fa-solid fa-inbox"></i>لا يوجد طلاب في هذا القسم حالياً${hasActiveFilters ? " بهذا الفلتر" : ""}.</div>`
     }
   `;
 
+  // دالة فتح التفاصيل
   window.toggleRow = (id) =>
     document.getElementById(`detail_${id}`).classList.toggle("open");
 
+  // دالة الحذف النهائي للطالب
+  window.handleDeleteAttempt = async (e, id, name) => {
+    e.stopPropagation();
+    const confirmed = confirm(`هل أنت متأكد من حذف الطالب (${name}) نهائياً من قاعدة البيانات؟`);
+    if (!confirmed) return;
+
+    try {
+      await deleteAttempt(id);
+      alert("تم حذف الطالب بنجاح");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء الحذف: " + (err.message || "يرجى التأكد من تشغيل أمر SQL الخاص بـ Policy الحذف"));
+    }
+  };
+
+  // الوضع المظلم والفاتح
   const themeToggle = document.getElementById("themeToggle");
   const htmlEl = document.documentElement;
   htmlEl.setAttribute(
