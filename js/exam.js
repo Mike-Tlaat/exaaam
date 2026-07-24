@@ -109,8 +109,9 @@ async function init() {
     console.error("❌ خطأ أثناء الاتصال بقاعدة البيانات:", err);
   }
 
-  if (!currentExam) {
-    showNotFoundMessage(`الامتحان المطلوب (${rawParam}) غير موجود في قاعدة البيانات.`);
+  // إذا كان الامتحان غير موجود أو مغلقاً من الإدارة
+  if (!currentExam || currentExam.is_open === false) {
+    showNotFoundMessage(`الامتحان المطلوب غير موجود حالياً أو متوقف.`);
     return;
   }
 
@@ -517,7 +518,6 @@ function safeParseDate(dateStr) {
   if (typeof dateStr === "number") return dateStr;
 
   let s = String(dateStr).trim().replace(" ", "T");
-  // إذا لم يتضمن التوقيت منطقة زمنية، نضيف Z لإجبار المتصفح على قراءته كـ UTC
   if (!s.includes("Z") && !s.includes("+") && !s.match(/-\d{2}:\d{2}$/)) {
     s += "Z";
   }
@@ -527,20 +527,17 @@ function safeParseDate(dateStr) {
 }
 
 /* =======================================
-   المؤقت المطور والمصمم ضد الأخطاء الزمنيّة
+   المؤقت
 ======================================= */
 function startTimer() {
-  const durationSec = Number(EXAM_DURATION_SECONDS) || 1800; // افتراضي 30 دقيقة
+  const durationSec = Number(EXAM_DURATION_SECONDS) || 1800;
   const localTimerKey = `timer_start_ms_${attemptId}`;
 
-  // 1. قراءة وقت البداية من localStorage المحلّي إن وجد
   let savedLocalMs = localStorage.getItem(localTimerKey);
   savedLocalMs = savedLocalMs ? Number(savedLocalMs) : null;
 
-  // 2. تحويل وقت السيرفر مع ضبط الـ UTC
   const dbStartMs = safeParseDate(currentAttempt?.exam_started_at || currentAttempt?.start_time || currentAttempt?.created_at);
 
-  // 3. اختيار الوقت الأصح لبداية الامتحان
   if (savedLocalMs && !isNaN(savedLocalMs) && savedLocalMs > 0) {
     examStartedAtMs = savedLocalMs;
   } else if (dbStartMs) {
@@ -556,7 +553,6 @@ function startTimer() {
 
   function tick() {
     const now = Date.now();
-    // حساب الثواني المنقضية (مع تجنب الأرقام السالبة)
     const elapsed = Math.max(0, Math.floor((now - examStartedAtMs) / 1000));
     const remaining = Math.max(0, durationSec - elapsed);
 
@@ -629,7 +625,7 @@ async function submitExam(isTimeOut) {
   }
 
   try {
-    await submitExamAttempt(attemptId, questions, answers);
+    await submitExamAttempt(attemptId, questions, postedAnswers);
     localStorage.removeItem(answersStorageKey());
     localStorage.removeItem(attemptStorageKey(currentExam.id));
     localStorage.removeItem(`timer_start_ms_${attemptId}`);
