@@ -15,8 +15,7 @@ import {
 } from "../includes/functions.js";
 
 const qs = new URLSearchParams(location.search);
-// 🛠️ تم التعديل هنا لقراءة 'slug' أو 'exam' تجنباً لخطأ عدم العثور على الامتحان
-const slug = qs.get("slug") || qs.get("exam") || "";
+const rawParam = (qs.get("slug") || qs.get("exam") || qs.get("id") || "").trim();
 
 const screens = {
   loading: document.getElementById("loadingScreen"),
@@ -93,16 +92,25 @@ function showModal({ type = "alert", title, text = "", summaryHtml = null, confi
    نقطة البداية
 ======================================= */
 async function init() {
-  if (!slug) {
-    document.body.innerHTML = "<p style='padding:2rem;text-align:center;color:#fff;'>الامتحان غير موجود</p>";
+  if (!rawParam) {
+    showNotFoundMessage("لم يتم تحديد امتحان في رابط الصفحة! يرجى الدخول من الصفحة الرئيسية.");
     return;
   }
 
-  // 🛠️ تم التعديل للبحث بالـ Slug أولاً ثم الـ ID احتياطياً
-  currentExam = (await getExamBySlug(slug)) || (await getExamById(slug));
+  try {
+    currentExam = await getExamBySlug(rawParam);
+    if (!currentExam) {
+      const numericId = Number(rawParam);
+      if (!isNaN(numericId) && numericId > 0) {
+        currentExam = await getExamById(numericId);
+      }
+    }
+  } catch (err) {
+    console.error("❌ خطأ أثناء الاتصال بقاعدة البيانات:", err);
+  }
 
   if (!currentExam) {
-    document.body.innerHTML = "<p style='padding:2rem;text-align:center;color:#fff;'>الامتحان غير موجود</p>";
+    showNotFoundMessage(`الامتحان المطلوب (${rawParam}) غير موجود في قاعدة البيانات.`);
     return;
   }
 
@@ -127,6 +135,18 @@ async function init() {
   }
 
   startExam();
+}
+
+function showNotFoundMessage(msg) {
+  document.body.innerHTML = `
+    <div style="padding: 3rem 1rem; text-align: center; color: #fff; font-family: Cairo, sans-serif; max-width: 500px; margin: 4rem auto; background: #1e2230; border-radius: 12px; border: 1px solid #2e3448;">
+      <i class="fa-solid fa-circle-exclamation" style="font-size: 3rem; color: #ef4444; margin-bottom: 1rem;"></i>
+      <h2 style="margin-bottom: 0.5rem;">الامتحان غير موجود</h2>
+      <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;">${msg}</p>
+      <a href="index.html" style="background: #3b82f6; color: #fff; padding: 0.6rem 1.2rem; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-house"></i> العودة للصفحة الرئيسية
+      </a>
+    </div>`;
 }
 
 /* =======================================
@@ -261,21 +281,19 @@ async function showPackages() {
   }
   sportsToggle.addEventListener("change", updateSportsVisibility);
 
-  // حد أقصى 3 أنشطة
   activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle)').forEach((input) => {
     input.addEventListener("change", (e) => {
       const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle):checked').length;
       if (checkedCount > MAX_ACTIVITIES) {
         e.target.checked = false;
         e.target.closest(".pkg-option")?.classList.remove("selected-active");
-        showModal({ type: "alert", title: "⚠️ الحد الأقصى للأنشطة", confirmText: "حسناً، فهمت", text: `لا يمكنك اختيار أكثر من ${MAX_ACTIVITIES} أنشطة فقط. يرجى إلغاء أحد الأنشطة المحددة أولاً.` });
+        showModal({ type: "alert", title: "⚠️ الحد الأقصى للأنشطة", confirmText: "حسناً، فهمت", text: `لا يمكنك اختيار أكثر من ${MAX_ACTIVITIES} أنشطة فقط.` });
       } else {
         e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
       }
     });
   });
 
-  // لعبة واحدة فردي + لعبة واحدة جماعي
   [individualCard, teamCard].forEach((card) => {
     card.querySelectorAll("input").forEach((input) => {
       input.addEventListener("change", (e) => {
@@ -354,7 +372,8 @@ async function startExam() {
   attemptId = currentAttempt.id;
 
   await ensureExamStarted(attemptId);
-  currentAttempt = await getAttempt(attemptId);
+  const updatedAttempt = await getAttempt(attemptId);
+  if (updatedAttempt) currentAttempt = updatedAttempt;
 
   questions = (await loadQuestions(currentExam.json_file)) || [];
 
@@ -491,24 +510,63 @@ function evaluateProgress() {
 }
 
 /* =======================================
-   المؤقت
+   دالة تحليل التواريخ بأمان مع معالجة UTC
+======================================= */
+function safeParseDate(dateStr) {
+  if (!dateStr) return null;
+  if (typeof dateStr === "number") return dateStr;
+
+  let s = String(dateStr).trim().replace(" ", "T");
+  // إذا لم يتضمن التوقيت منطقة زمنية، نضيف Z لإجبار المتصفح على قراءته كـ UTC
+  if (!s.includes("Z") && !s.includes("+") && !s.match(/-\d{2}:\d{2}$/)) {
+    s += "Z";
+  }
+
+  const time = new Date(s).getTime();
+  return isNaN(time) ? null : time;
+}
+
+/* =======================================
+   المؤقت المطور والمصمم ضد الأخطاء الزمنيّة
 ======================================= */
 function startTimer() {
-  const base = currentAttempt.exam_started_at || currentAttempt.start_time;
-  examStartedAtMs = new Date(base).getTime();
+  const durationSec = Number(EXAM_DURATION_SECONDS) || 1800; // افتراضي 30 دقيقة
+  const localTimerKey = `timer_start_ms_${attemptId}`;
+
+  // 1. قراءة وقت البداية من localStorage المحلّي إن وجد
+  let savedLocalMs = localStorage.getItem(localTimerKey);
+  savedLocalMs = savedLocalMs ? Number(savedLocalMs) : null;
+
+  // 2. تحويل وقت السيرفر مع ضبط الـ UTC
+  const dbStartMs = safeParseDate(currentAttempt?.exam_started_at || currentAttempt?.start_time || currentAttempt?.created_at);
+
+  // 3. اختيار الوقت الأصح لبداية الامتحان
+  if (savedLocalMs && !isNaN(savedLocalMs) && savedLocalMs > 0) {
+    examStartedAtMs = savedLocalMs;
+  } else if (dbStartMs) {
+    examStartedAtMs = dbStartMs;
+    localStorage.setItem(localTimerKey, String(dbStartMs));
+  } else {
+    examStartedAtMs = Date.now();
+    localStorage.setItem(localTimerKey, String(examStartedAtMs));
+  }
+
   const timerEl = document.getElementById("timer");
   const timerContainer = document.getElementById("timerContainer");
 
   function tick() {
-    const elapsed = Math.floor((Date.now() - examStartedAtMs) / 1000);
-    const remaining = Math.max(0, EXAM_DURATION_SECONDS - elapsed);
+    const now = Date.now();
+    // حساب الثواني المنقضية (مع تجنب الأرقام السالبة)
+    const elapsed = Math.max(0, Math.floor((now - examStartedAtMs) / 1000));
+    const remaining = Math.max(0, durationSec - elapsed);
 
     if (remaining <= 0) {
       timerEl.textContent = "00:00";
-      clearInterval(timerInterval);
+      if (timerInterval) clearInterval(timerInterval);
       submitExam(true);
       return;
     }
+
     if (remaining <= 120) timerContainer.classList.add("critical");
 
     const mins = String(Math.floor(remaining / 60)).padStart(2, "0");
@@ -516,6 +574,7 @@ function startTimer() {
     timerEl.textContent = `${mins}:${secs}`;
   }
 
+  if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(tick, 1000);
   tick();
 }
@@ -562,19 +621,24 @@ function validateAndSubmit(isTimeOut) {
 }
 
 async function submitExam(isTimeOut) {
-  clearInterval(timerInterval);
+  if (timerInterval) clearInterval(timerInterval);
   const submitBtn = document.getElementById("submitExamBtn");
-  submitBtn.disabled = true;
-  submitBtn.textContent = "جاري التسليم...";
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "جاري التسليم...";
+  }
 
   try {
     await submitExamAttempt(attemptId, questions, answers);
     localStorage.removeItem(answersStorageKey());
     localStorage.removeItem(attemptStorageKey(currentExam.id));
+    localStorage.removeItem(`timer_start_ms_${attemptId}`);
     window.location.href = `results.html?attempt=${attemptId}`;
   } catch (err) {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "إنهاء وتسليم الامتحان";
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "إنهاء وتسليم الامتحان";
+    }
     document.getElementById("submitErrorBox").textContent = "حدث خطأ غير متوقع أثناء حفظ الامتحان، حاول مرة أخرى.";
     document.getElementById("submitErrorBox").classList.remove("hidden");
   }
