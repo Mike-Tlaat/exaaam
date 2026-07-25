@@ -149,7 +149,7 @@ export async function getGradeText(percentage) {
 }
 
 export async function getPassThreshold() {
-  return 50;
+  return 50; // حد النجاح 50%
 }
 
 /* =======================================
@@ -283,6 +283,9 @@ export async function submitExamAttempt(attemptId, questions, postedAnswers) {
   return true;
 }
 
+/* =======================================
+   حذف الطالب (المحاولة) نهائياً
+======================================= */
 export async function deleteAttempt(attemptId) {
   const { error } = await supabase
     .from("attempts")
@@ -293,7 +296,7 @@ export async function deleteAttempt(attemptId) {
 }
 
 /* =======================================
-   نظام اختيار الأنشطة (مع إزالة التكرار)
+   نظام اختيار الأنشطة
 ======================================= */
 export function getPackageCategories() {
   return PACKAGE_CATEGORIES;
@@ -312,10 +315,9 @@ export async function loadPackages() {
     const result = { ...empty };
     Object.keys(categories).forEach((cat) => {
       if (Array.isArray(data[cat])) {
-        const clean = data[cat]
+        result[cat] = data[cat]
           .map((v) => String(v).trim())
           .filter((v) => v !== "");
-        result[cat] = [...new Set(clean)];
       }
     });
     return result;
@@ -340,13 +342,8 @@ export async function savePackageSelections(
     if (!Array.isArray(chosen)) chosen = chosen ? [chosen] : [];
 
     const validItems = available[category] || [];
-    // منع تكرار العنصر نفسه لنفس المستخدم
     chosen = [
-      ...new Set(
-        chosen
-          .map((v) => String(v).trim())
-          .filter((v) => v !== "" && validItems.includes(v)),
-      ),
+      ...new Set(chosen.filter((v) => v !== "" && validItems.includes(v))),
     ];
 
     if (category === "أنشطة") {
@@ -384,12 +381,120 @@ export async function getPackageSelections(attemptId) {
     .eq("attempt_id", attemptId)
     .order("id");
 
-  (data || []).forEach((row) => {
-    if (result[row.category] && !result[row.category].includes(row.item)) {
-      result[row.category].push(row.item);
-    }
-  });
+  (data || []).forEach((row) => result[row.category]?.push(row.item));
   return result;
+}
+
+/* =======================================
+   لوحة الإدارة (مع دعم البحث بالإسم أو الرقم)
+======================================= */
+export async function countAttemptsByPassFail(
+  passFail,
+  filterCategory = null,
+  filterItem = null,
+  filterChurch = null,
+  filterExamId = null,
+  searchQuery = null,
+) {
+  let query = supabase
+    .from("attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("pass_fail", passFail);
+
+  if (filterChurch && filterChurch.trim() !== "") {
+    query = query.eq("user_church", filterChurch.trim());
+  }
+
+  if (filterExamId && String(filterExamId).trim() !== "") {
+    query = query.eq("exam_id", Number(filterExamId));
+  }
+
+  if (searchQuery && searchQuery.trim() !== "") {
+    const q = searchQuery.trim();
+    query = query.or(`user_name.ilike.%${q}%,user_phone.ilike.%${q}%`);
+  }
+
+  if (filterCategory && filterItem) {
+    const { data: pkgData } = await supabase
+      .from("attempt_packages")
+      .select("attempt_id")
+      .eq("category", filterCategory)
+      .eq("item", filterItem);
+    const ids = (pkgData || []).map((r) => r.attempt_id);
+    if (!ids.length) return 0;
+    query = query.in("id", ids);
+  }
+
+  const { count, error } = await query;
+  if (error) {
+    console.error("Count attempts error:", error);
+    return 0;
+  }
+  return count || 0;
+}
+
+export async function getAttemptsByPassFail(
+  passFail,
+  filterCategory = null,
+  filterItem = null,
+  filterChurch = null,
+  filterExamId = null,
+  limit = 50,
+  offset = 0,
+  searchQuery = null,
+) {
+  let idFilter = null;
+  if (filterCategory && filterItem) {
+    const { data: pkgData } = await supabase
+      .from("attempt_packages")
+      .select("attempt_id")
+      .eq("category", filterCategory)
+      .eq("item", filterItem);
+    idFilter = (pkgData || []).map((r) => r.attempt_id);
+    if (!idFilter.length) return [];
+  }
+
+  let query = supabase
+    .from("attempts")
+    .select(
+      "id, exam_id, user_name, user_church, user_phone, status, total_score, total_possible, percentage, grade_text, pass_fail, created_at",
+    )
+    .eq("pass_fail", passFail)
+    .order("created_at", { ascending: false });
+
+  if (filterChurch && filterChurch.trim() !== "") {
+    query = query.eq("user_church", filterChurch.trim());
+  }
+
+  if (filterExamId && String(filterExamId).trim() !== "") {
+    query = query.eq("exam_id", Number(filterExamId));
+  }
+
+  if (searchQuery && searchQuery.trim() !== "") {
+    const q = searchQuery.trim();
+    query = query.or(`user_name.ilike.%${q}%,user_phone.ilike.%${q}%`);
+  }
+
+  if (idFilter) {
+    query = query.in("id", idFilter);
+  }
+
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Get attempts error:", error);
+    return [];
+  }
+
+  const examsList = await getAllExams();
+  const examMap = {};
+  examsList.forEach((e) => (examMap[e.id] = e.name));
+
+  return (data || []).map((row) => ({
+    ...row,
+    exam_name: examMap[row.exam_id] || "امتحان غير معروف",
+  }));
 }
 
 export async function getPackageSelectionsBatch(attemptIds) {
@@ -411,11 +516,7 @@ export async function getPackageSelectionsBatch(attemptIds) {
     if (!result[row.attempt_id]) result[row.attempt_id] = {};
     if (!result[row.attempt_id][row.category])
       result[row.attempt_id][row.category] = [];
-
-    // إستبعاد أي تكرار للعنصر
-    if (!result[row.attempt_id][row.category].includes(row.item)) {
-      result[row.attempt_id][row.category].push(row.item);
-    }
+    result[row.attempt_id][row.category].push(row.item);
   });
 
   return result;
@@ -429,6 +530,7 @@ export async function getChurchPrintData(churchName) {
 
   const exams = await getAllExams();
 
+  // جلب الطلاب المسجلين والذين أتموا الامتحان فقط (استبعاد المحذوفين والمحاولات غير المكتملة)
   const { data: attempts, error } = await supabase
     .from("attempts")
     .select(
@@ -487,6 +589,7 @@ export async function getChurchPrintData(churchName) {
     }
   });
 
+  // استبعاد الامتحانات التي ليس بها طلاب إطلاقاً لهذه الكنيسة
   const activeExamsData = Object.values(examMap).filter(
     (item) => item.passed.length > 0 || item.failed.length > 0,
   );
