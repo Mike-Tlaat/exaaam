@@ -202,7 +202,6 @@ export async function renderAdminAttemptsPage(tab) {
 
   app.innerHTML = `
     <style>
-      /* استايلات التناسق للموبايل وأزرار الحذف والبحث */
       .a-table-wrapper {
         width: 100%;
         overflow-x: auto;
@@ -300,6 +299,7 @@ export async function renderAdminAttemptsPage(tab) {
     <div class="a-tabs-row">
       <a href="passed.html${tabQueryStr}" class="a-tab-btn ${isPassPage ? "active pass" : ""}"><i class="fa-solid fa-circle-check"></i> الناجحون (${passTotal})</a>
       <a href="failed.html${tabQueryStr}" class="a-tab-btn ${!isPassPage ? "active fail" : ""}"><i class="fa-solid fa-circle-xmark"></i> غير الناجحين (${failTotal})</a>
+      <a href="print.html" class="a-tab-btn" style="background:#0284c7; color:#fff;"><i class="fa-solid fa-print"></i> صفحة الطباعة و PDF</a>
     </div>
 
     <form class="a-filter-bar" method="GET">
@@ -364,11 +364,9 @@ export async function renderAdminAttemptsPage(tab) {
     }
   `;
 
-  // دالة فتح التفاصيل
   window.toggleRow = (id) =>
     document.getElementById(`detail_${id}`).classList.toggle("open");
 
-  // دالة الحذف النهائي للطالب
   window.handleDeleteAttempt = async (e, id, name) => {
     e.stopPropagation();
     const confirmed = confirm(`هل أنت متأكد من حذف الطالب (${name}) نهائياً من قاعدة البيانات؟`);
@@ -384,7 +382,6 @@ export async function renderAdminAttemptsPage(tab) {
     }
   };
 
-  // الوضع المظلم والفاتح
   const themeToggle = document.getElementById("themeToggle");
   const htmlEl = document.documentElement;
   htmlEl.setAttribute(
