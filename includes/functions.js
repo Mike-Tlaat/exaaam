@@ -521,3 +521,77 @@ export async function getPackageSelectionsBatch(attemptIds) {
 
   return result;
 }
+
+/* =======================================
+   طباعة التقرير الكامل لكنيسة محددة
+======================================= */
+export async function getChurchPrintData(churchName) {
+  if (!churchName || churchName.trim() === "") return null;
+
+  const exams = await getAllExams();
+
+  const { data: attempts, error } = await supabase
+    .from("attempts")
+    .select(
+      "id, exam_id, user_name, user_church, user_phone, status, total_score, total_possible, percentage, grade_text, pass_fail, created_at",
+    )
+    .eq("user_church", churchName.trim())
+    .order("user_name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching church print data:", error);
+    return null;
+  }
+
+  const allAttempts = attempts || [];
+  const attemptIds = allAttempts.map((a) => a.id);
+  const selectionsBatch = await getPackageSelectionsBatch(attemptIds);
+
+  let totalPassed = 0;
+  let totalFailed = 0;
+
+  const examMap = {};
+  exams.forEach((exam) => {
+    examMap[exam.id] = {
+      exam: exam,
+      passed: [],
+      failed: [],
+    };
+  });
+
+  allAttempts.forEach((att) => {
+    const pkgs = selectionsBatch[att.id] || {};
+    const studentObj = {
+      ...att,
+      packages: pkgs,
+    };
+
+    if (att.pass_fail === "pass") {
+      totalPassed++;
+    } else {
+      totalFailed++;
+    }
+
+    if (examMap[att.exam_id]) {
+      if (att.pass_fail === "pass") {
+        examMap[att.exam_id].passed.push(studentObj);
+      } else {
+        examMap[att.exam_id].failed.push(studentObj);
+      }
+    } else {
+      examMap[att.exam_id] = {
+        exam: { id: att.exam_id, name: `امتحان رقم ${att.exam_id}` },
+        passed: att.pass_fail === "pass" ? [studentObj] : [],
+        failed: att.pass_fail === "fail" ? [studentObj] : [],
+      };
+    }
+  });
+
+  return {
+    churchName: churchName.trim(),
+    totalPassed,
+    totalFailed,
+    totalStudents: allAttempts.length,
+    examsData: Object.values(examMap),
+  };
+}
