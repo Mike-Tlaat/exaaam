@@ -530,12 +530,14 @@ export async function getChurchPrintData(churchName) {
 
   const exams = await getAllExams();
 
+  // جلب الطلاب المسجلين والذين أتموا الامتحان فقط (استبعاد المحذوفين والمحاولات غير المكتملة)
   const { data: attempts, error } = await supabase
     .from("attempts")
     .select(
       "id, exam_id, user_name, user_church, user_phone, status, total_score, total_possible, percentage, grade_text, pass_fail, created_at",
     )
     .eq("user_church", churchName.trim())
+    .in("status", ["submitted", "graded"])
     .order("user_name", { ascending: true });
 
   if (error) {
@@ -587,11 +589,16 @@ export async function getChurchPrintData(churchName) {
     }
   });
 
+  // استبعاد الامتحانات التي ليس بها طلاب إطلاقاً لهذه الكنيسة
+  const activeExamsData = Object.values(examMap).filter(
+    (item) => item.passed.length > 0 || item.failed.length > 0,
+  );
+
   return {
     churchName: churchName.trim(),
     totalPassed,
     totalFailed,
     totalStudents: allAttempts.length,
-    examsData: Object.values(examMap),
+    examsData: activeExamsData,
   };
 }
