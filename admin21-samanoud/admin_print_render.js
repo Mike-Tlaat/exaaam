@@ -8,27 +8,31 @@ function escapeHtml(str) {
 }
 
 function formatActivities(pkgObj) {
-  if (!pkgObj) return '<span class="no-sel">لم يتم اختيار أنشطة</span>';
+  if (!pkgObj) return '<span class="p-no-item">لم يتم الاختيار</span>';
   const activities = (pkgObj["أنشطة"] || []).filter(
     (item) => item !== "مسابقات رياضية",
   );
 
   if (!activities.length) {
-    return '<span class="no-sel">لم يتم اختيار أنشطة</span>';
+    return '<span class="p-no-item">لم يتم الاختيار</span>';
   }
-  return activities.map((a) => escapeHtml(a)).join(" ، ");
+  return activities
+    .map((a) => `<span class="p-chip activity">${escapeHtml(a)}</span>`)
+    .join(" ");
 }
 
 function formatGames(pkgObj) {
-  if (!pkgObj) return '<span class="no-sel">لم يتم اختيار ألعاب</span>';
+  if (!pkgObj) return '<span class="p-no-item">لم يتم الاختيار</span>';
   const single = pkgObj["اللعب الفردي"] || [];
   const group = pkgObj["اللعب الجماعي"] || [];
   const games = [...single, ...group];
 
   if (!games.length) {
-    return '<span class="no-sel">لم يتم اختيار ألعاب</span>';
+    return '<span class="p-no-item">لم يتم الاختيار</span>';
   }
-  return games.map((g) => escapeHtml(g)).join(" ، ");
+  return games
+    .map((g) => `<span class="p-chip game">${escapeHtml(g)}</span>`)
+    .join(" ");
 }
 
 export async function renderAdminPrintPage() {
@@ -41,13 +45,11 @@ export async function renderAdminPrintPage() {
     printData = await getChurchPrintData(selectedChurch);
   }
 
-  // خيارات الكنائس
   const churchOptionsHtml = CHURCHES_LIST.map((church) => {
     const selected = selectedChurch === church ? "selected" : "";
     return `<option value="${escapeHtml(church)}" ${selected}>${escapeHtml(church)}</option>`;
   }).join("");
 
-  // تجهيز محتوى الامتحانات
   let examsHtml = "";
   if (printData && printData.examsData.length) {
     examsHtml = printData.examsData
@@ -60,18 +62,18 @@ export async function renderAdminPrintPage() {
               .map(
                 (st, idx) => `
               <tr>
-                <td style="text-align:center;">${idx + 1}</td>
-                <td><b>${escapeHtml(st.user_name)}</b></td>
-                <td style="direction:ltr; text-align:right;">${escapeHtml(st.user_phone)}</td>
-                <td style="text-align:center;">
-                  <span class="pct-badge pass">${st.total_score}/${st.total_possible} (${Number(st.percentage).toFixed(1)}% - ${escapeHtml(st.grade_text || "ناجح")})</span>
+                <td class="col-num">${idx + 1}</td>
+                <td class="col-name"><b>${escapeHtml(st.user_name)}</b></td>
+                <td class="col-phone">${escapeHtml(st.user_phone)}</td>
+                <td class="col-score">
+                  <span class="p-grade-badge pass">${st.total_score} / ${st.total_possible} (${Number(st.percentage).toFixed(1)}%) - ${escapeHtml(st.grade_text || "ناجح")}</span>
                 </td>
-                <td>${formatActivities(st.packages)}</td>
-                <td>${formatGames(st.packages)}</td>
+                <td class="col-tags">${formatActivities(st.packages)}</td>
+                <td class="col-tags">${formatGames(st.packages)}</td>
               </tr>`,
               )
               .join("")
-          : `<tr><td colspan="6" class="empty-cell">لا يوجد طلاب ناجحين في هذا الامتحان</td></tr>`;
+          : `<tr><td colspan="6" class="p-empty-row"><i class="fa-solid fa-circle-info"></i> لا يوجد طلاب ناجحون في هذا الامتحان</td></tr>`;
 
         // جدول غير الناجحين
         const failedRows = item.failed.length
@@ -79,48 +81,56 @@ export async function renderAdminPrintPage() {
               .map(
                 (st, idx) => `
               <tr>
-                <td style="text-align:center;">${idx + 1}</td>
-                <td><b>${escapeHtml(st.user_name)}</b></td>
-                <td style="direction:ltr; text-align:right;">${escapeHtml(st.user_phone)}</td>
-                <td style="text-align:center;">
-                  <span class="pct-badge fail">${st.total_score}/${st.total_possible} (${Number(st.percentage).toFixed(1)}% - ${escapeHtml(st.grade_text || "راسب")})</span>
+                <td class="col-num">${idx + 1}</td>
+                <td class="col-name"><b>${escapeHtml(st.user_name)}</b></td>
+                <td class="col-phone">${escapeHtml(st.user_phone)}</td>
+                <td class="col-score">
+                  <span class="p-grade-badge fail">${st.total_score} / ${st.total_possible} (${Number(st.percentage).toFixed(1)}%) - ${escapeHtml(st.grade_text || "راسب")}</span>
                 </td>
-                <td>${formatActivities(st.packages)}</td>
-                <td>${formatGames(st.packages)}</td>
+                <td class="col-tags">${formatActivities(st.packages)}</td>
+                <td class="col-tags">${formatGames(st.packages)}</td>
               </tr>`,
               )
               .join("")
-          : `<tr><td colspan="6" class="empty-cell">لا يوجد طلاب راسبين في هذا الامتحان</td></tr>`;
+          : `<tr><td colspan="6" class="p-empty-row"><i class="fa-solid fa-circle-info"></i> لا يوجد طلاب راسبون في هذا الامتحان</td></tr>`;
 
         return `
-        <div class="p-exam-section">
-          <div class="p-exam-title"><i class="fa-solid fa-book-open"></i> ${examName}</div>
+        <div class="p-exam-card">
+          <div class="p-exam-header">
+            <i class="fa-solid fa-book-bookmark"></i> ${examName}
+          </div>
 
-          <div class="p-sub-title pass"><i class="fa-solid fa-circle-check"></i> قائمة الناجحين (${item.passed.length})</div>
-          <table class="p-table">
+          <!-- الناجحون -->
+          <div class="p-section-divider pass">
+            <span><i class="fa-solid fa-circle-check"></i> الناجحون (${item.passed.length})</span>
+          </div>
+          <table class="p-report-table">
             <thead>
               <tr>
                 <th style="width: 5%;">#</th>
                 <th style="width: 25%;">اسم الطالب</th>
                 <th style="width: 15%;">رقم الهاتف</th>
-                <th style="width: 20%;">الدرجة والتقدير</th>
-                <th style="width: 18%;">الأنشطة</th>
-                <th style="width: 17%;">الألعاب</th>
+                <th style="width: 20%;">النتيجة والتقدير</th>
+                <th style="width: 17%;">الأنشطة</th>
+                <th style="width: 18%;">الألعاب</th>
               </tr>
             </thead>
             <tbody>${passedRows}</tbody>
           </table>
 
-          <div class="p-sub-title fail"><i class="fa-solid fa-circle-xmark"></i> قائمة غير الناجحين / الراسبين (${item.failed.length})</div>
-          <table class="p-table">
+          <!-- الراسبون -->
+          <div class="p-section-divider fail">
+            <span><i class="fa-solid fa-circle-xmark"></i> غير الناجحين (${item.failed.length})</span>
+          </div>
+          <table class="p-report-table">
             <thead>
               <tr>
                 <th style="width: 5%;">#</th>
                 <th style="width: 25%;">اسم الطالب</th>
                 <th style="width: 15%;">رقم الهاتف</th>
-                <th style="width: 20%;">الدرجة والتقدير</th>
-                <th style="width: 18%;">الأنشطة</th>
-                <th style="width: 17%;">الألعاب</th>
+                <th style="width: 20%;">النتيجة والتقدير</th>
+                <th style="width: 17%;">الأنشطة</th>
+                <th style="width: 18%;">الألعاب</th>
               </tr>
             </thead>
             <tbody>${failedRows}</tbody>
@@ -132,236 +142,319 @@ export async function renderAdminPrintPage() {
 
   app.innerHTML = `
     <style>
-      /* استايلات الواجهة والطباعة */
-      .no-print-area {
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+
+      .print-page-wrapper {
+        font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+        color: #0f172a;
+        direction: rtl;
+      }
+
+      /* شريط اختيار الكنيسة العلوي */
+      .p-control-panel {
         background: var(--a-bg-card, #1e293b);
-        padding: 1.25rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
+        padding: 1.25rem 1.5rem;
+        border-radius: 14px;
+        margin-bottom: 2rem;
         display: flex;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 1.25rem;
         align-items: center;
         justify-content: space-between;
+        border: 1px solid var(--a-border, #334155);
       }
-      .church-select-form {
+      .p-select-group {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        flex: 1 1 300px;
+        flex: 1 1 350px;
       }
-      .church-select-form select {
-        padding: 0.6rem 1rem;
-        border-radius: 8px;
+      .p-select-group label {
+        font-weight: 700;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        color: var(--a-text, #f8fafc);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .p-select-group select {
+        padding: 0.65rem 1rem;
+        border-radius: 10px;
         border: 1px solid var(--a-border, #334155);
         background: var(--a-bg, #0f172a);
         color: var(--a-text, #f8fafc);
         font-family: inherit;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
+        font-weight: 600;
         flex: 1;
+        outline: none;
       }
-      .p-btn-print {
+      .p-print-btn {
         background: #0284c7;
         color: #ffffff;
         border: none;
-        padding: 0.65rem 1.4rem;
-        border-radius: 8px;
-        font-weight: bold;
+        padding: 0.7rem 1.6rem;
+        border-radius: 10px;
+        font-weight: 700;
         font-size: 0.95rem;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        transition: all 0.2s;
+        gap: 0.6rem;
+        transition: all 0.2s ease;
       }
-      .p-btn-print:hover { background: #0369a1; }
+      .p-print-btn:hover {
+        background: #0369a1;
+        transform: translateY(-1px);
+      }
 
-      /* الهيدر المخصص للطباعة */
-      .p-header-box {
-        text-align: center;
-        padding: 1rem 0;
-        border-bottom: 3px double #0284c7;
-        margin-bottom: 1.5rem;
+      /* ورقة التقرير والرأس */
+      .p-report-container {
+        background: #ffffff;
+        color: #0f172a;
+        border-radius: 16px;
+        padding: 2rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
       }
-      .p-cross-symbol {
-        font-size: 2rem;
+      .p-church-header {
+        text-align: center;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px dashed #cbd5e1;
+        margin-bottom: 1.75rem;
+      }
+      .p-cross-emblem {
+        width: 52px;
+        height: 52px;
+        background: #f1f5f9;
         color: #0284c7;
-        margin-bottom: 0.2rem;
+        border: 2px solid #0284c7;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 0.6rem;
       }
-      .p-header-box h1 {
-        margin: 0.3rem 0;
-        font-size: 1.6rem;
-        font-weight: 800;
+      .p-church-header h1 {
+        margin: 0.2rem 0;
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: #0f172a;
       }
-      .p-header-box p {
+      .p-church-header p {
         margin: 0;
-        color: var(--a-text-soft, #64748b);
-        font-size: 0.9rem;
+        color: #64748b;
+        font-size: 0.92rem;
+        font-weight: 600;
       }
 
-      /* شريط الإحصائيات */
-      .p-stats-bar {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+      /* شريط كروت الإحصائيات */
+      .p-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
       }
-      .p-stat-item {
-        flex: 1;
-        background: var(--a-bg-card, #1e293b);
-        padding: 0.8rem 1rem;
-        border-radius: 8px;
-        border: 1px solid var(--a-border, #334155);
+      .p-metric-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
         text-align: center;
       }
-      .p-stat-item .lbl { font-size: 0.82rem; color: var(--a-text-soft, #94a3b8); font-weight: bold; }
-      .p-stat-item .val { font-size: 1.3rem; font-weight: 800; margin-top: 0.2rem; }
-      .p-stat-item .val.pass { color: #22c55e; }
-      .p-stat-item .val.fail { color: #ef4444; }
-      .p-stat-item .val.total { color: #3b82f6; }
+      .p-metric-card .title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+      }
+      .p-metric-card .number {
+        font-size: 1.6rem;
+        font-weight: 900;
+        margin-top: 0.3rem;
+      }
+      .p-metric-card.pass .number { color: #16a34a; }
+      .p-metric-card.fail .number { color: #dc2626; }
+      .p-metric-card.total .number { color: #0284c7; }
 
-      /* جداول وتقسيمات الامتحانات */
-      .p-exam-section {
-        margin-bottom: 2rem;
+      /* تقارير الامتحانات والجداول */
+      .p-exam-card {
+        margin-bottom: 2.25rem;
         page-break-inside: avoid;
       }
-      .p-exam-title {
+      .p-exam-header {
         background: #0f172a;
         color: #ffffff;
-        padding: 0.6rem 1rem;
-        border-radius: 8px;
+        padding: 0.75rem 1.25rem;
+        border-radius: 10px;
         font-size: 1.1rem;
-        font-weight:bold;
-        margin-bottom: 1rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1.25rem;
       }
-      .p-sub-title {
+      .p-section-divider {
         font-size: 0.95rem;
         font-weight: 800;
-        margin: 1rem 0 0.5rem 0;
-        padding-right: 0.6rem;
-        border-right: 4px solid #22c55e;
+        margin: 1.25rem 0 0.75rem 0;
+        padding-right: 0.75rem;
+        border-right: 4px solid #16a34a;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
       }
-      .p-sub-title.fail { border-right-color: #ef4444; }
+      .p-section-divider.fail { border-right-color: #dc2626; }
 
-      .p-table {
+      .p-report-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 1rem;
+        margin-bottom: 1.25rem;
         font-size: 0.88rem;
       }
-      .p-table th, .p-table td {
-        border: 1px solid var(--a-border, #334155);
-        padding: 0.55rem 0.75rem;
+      .p-report-table th {
+        background: #f1f5f9;
+        color: #334155;
+        font-weight: 800;
+        border: 1px solid #cbd5e1;
+        padding: 0.65rem 0.75rem;
         text-align: right;
       }
-      .p-table th {
-        background: rgba(255,255,255,0.05);
-        font-weight: bold;
+      .p-report-table td {
+        border: 1px solid #e2e8f0;
+        padding: 0.6rem 0.75rem;
+        text-align: right;
+        vertical-align: middle;
       }
-      .pct-badge {
+      .p-report-table tr:nth-child(even) td {
+        background: #f8fafc;
+      }
+      .col-num { text-align: center !important; font-weight: bold; color: #64748b; }
+      .col-phone { direction: ltr; text-align: right !important; font-family: monospace; font-size: 0.92rem; }
+
+      /* البادجات والشرائح */
+      .p-grade-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+      .p-grade-badge.pass { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+      .p-grade-badge.fail { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+      .p-chip {
         display: inline-block;
         padding: 2px 8px;
         border-radius: 4px;
         font-size: 0.8rem;
-        font-weight: bold;
+        font-weight: 700;
+        margin: 2px 1px;
       }
-      .pct-badge.pass { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-      .pct-badge.fail { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-      .no-sel { color: var(--a-text-soft, #94a3b8); font-style: italic; font-size: 0.82rem; }
-      .empty-cell { text-align: center; color: var(--a-text-soft, #94a3b8); font-style: italic; padding: 1rem; }
+      .p-chip.activity { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+      .p-chip.game { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+      .p-no-item { color: #94a3b8; font-style: italic; font-size: 0.82rem; }
+      .p-empty-row { text-align: center !important; color: #94a3b8; font-style: italic; padding: 1.25rem !important; }
 
-      /* قواعد الطباعة وتوليد PDF */
+      /* إعدادات وتنسيق الطباعة والتصدير */
       @media print {
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
         body {
           background: #ffffff !important;
           color: #000000 !important;
           font-family: 'Cairo', sans-serif !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
         .a-shell { padding: 0 !important; max-width: 100% !important; }
-        .no-print-area, .a-topbar, .a-tabs-row { display: none !important; }
-        .p-header-box { border-bottom-color: #000 !important; }
-        .p-cross-symbol { color: #000 !important; }
-        .p-stat-item {
-          background: #f8fafc !important;
-          border: 1px solid #cbd5e1 !important;
-        }
-        .p-stat-item .val { color: #000 !important; }
-        .p-exam-title {
-          background: #1e293b !important;
-          color: #fff !important;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        .p-table th, .p-table td {
-          border: 1px solid #94a3b8 !important;
-          color: #000 !important;
-        }
-        .p-table th { background: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
-        .pct-badge { border: 1px solid #94a3b8 !important; }
-        .pct-badge.pass { color: #15803d !important; background: #dcfce7 !important; }
-        .pct-badge.fail { color: #b91c1c !important; background: #fee2e2 !important; }
-        .p-exam-section { page-break-inside: avoid; }
+        .p-control-panel, .a-topbar, .a-tabs-row { display: none !important; }
+        .p-report-container { border: none !important; box-shadow: none !important; padding: 0 !important; }
+        .p-church-header { border-bottom-color: #000 !important; }
+        .p-cross-emblem { border-color: #000 !important; color: #000 !important; background: transparent !important; }
+        .p-metric-card { border: 1px solid #000 !important; background: #fff !important; }
+        .p-metric-card .number { color: #000 !important; }
+        .p-exam-header { background: #0f172a !important; color: #fff !important; }
+        .p-report-table th { background: #e2e8f0 !important; color: #000 !important; border: 1px solid #000 !important; }
+        .p-report-table td { border: 1px solid #64748b !important; color: #000 !important; }
+        .p-grade-badge { border: 1px solid #000 !important; }
+        .p-chip { border: 1px solid #94a3b8 !important; }
       }
     </style>
 
-    <div class="a-topbar">
-      <div>
-        <h1><i class="fa-solid fa-print"></i> طباعة تقارير الكنائس</h1>
-        <p>توليد تقرير شامل للكنيسة مفصل بكل امتحان والناجحين والراسبين والأنشطة والألعاب</p>
+    <div class="print-page-wrapper">
+      <div class="a-topbar">
+        <div>
+          <h1><i class="fa-solid fa-print"></i> تقارير طباعة الكنائس</h1>
+          <p>عرض كشف نتائج الكنيسة المفصل بالامتحانات والطلاب والأنشطة</p>
+        </div>
+        <div>
+          <a href="passed.html" class="a-tab-btn" style="text-decoration:none;"><i class="fa-solid fa-arrow-right"></i> لوحة التحكم</a>
+        </div>
       </div>
-      <div>
-        <a href="passed.html" class="a-tab-btn" style="text-decoration:none;"><i class="fa-solid fa-arrow-right"></i> الرجوع للوحة التحكم</a>
-      </div>
-    </div>
 
-    <div class="no-print-area">
-      <form class="church-select-form" method="GET">
-        <label style="font-weight:bold; white-space:nowrap;"><i class="fa-solid fa-church"></i> اختر الكنيسة:</label>
-        <select name="church" onchange="this.form.submit()">
-          <option value="">-- اختر الكنيسة للطباعة --</option>
-          ${churchOptionsHtml}
-        </select>
-      </form>
+      <div class="p-control-panel">
+        <form class="p-select-group" method="GET">
+          <label><i class="fa-solid fa-church"></i> تحديد الكنيسة:</label>
+          <select name="church" onchange="this.form.submit()">
+            <option value="">-- اختر الكنيسة من القائمة --</option>
+            ${churchOptionsHtml}
+          </select>
+        </form>
+
+        ${
+          selectedChurch
+            ? `<button class="p-print-btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> طباعة / حفظ كملف PDF</button>`
+            : ""
+        }
+      </div>
 
       ${
         selectedChurch
-          ? `<button class="p-btn-print" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> طباعة / حفظ PDF</button>`
-          : ""
+          ? `
+        <div class="p-report-container">
+          <div class="p-church-header">
+            <div class="p-cross-emblem"><i class="fa-solid fa-cross"></i></div>
+            <h1>${escapeHtml(selectedChurch)}</h1>
+            <p>كشف نتائج ودرجات طلاب الكنيسة في الاختبارات والأنشطة الأسبوعية</p>
+          </div>
+
+          <div class="p-metrics-grid">
+            <div class="p-metric-card pass">
+              <div class="title"><i class="fa-solid fa-user-check"></i> إجمالي الناجحين</div>
+              <div class="number">${printData ? printData.totalPassed : 0}</div>
+            </div>
+            <div class="p-metric-card fail">
+              <div class="title"><i class="fa-solid fa-user-xmark"></i> إجمالي غير الناجحين</div>
+              <div class="number">${printData ? printData.totalFailed : 0}</div>
+            </div>
+            <div class="p-metric-card total">
+              <div class="title"><i class="fa-solid fa-users"></i> المتقدمين للاختبارات</div>
+              <div class="number">${printData ? printData.totalStudents : 0}</div>
+            </div>
+          </div>
+
+          ${
+            examsHtml ||
+            '<div class="a-empty-state"><i class="fa-solid fa-folder-open"></i> لا توجد بيانات نتائج مسجلة لهذه الكنيسة.</div>'
+          }
+        </div>
+      `
+          : `
+        <div class="a-empty-state" style="padding: 4rem 1rem; background: var(--a-bg-card, #1e293b); border-radius:16px;">
+          <i class="fa-solid fa-church" style="font-size: 3.5rem; margin-bottom: 1rem; color: #0284c7;"></i>
+          <h2>برجاء اختيار الكنيسة للبدء</h2>
+          <p>اختر الكنيسة المطلوبة من القائمة بالأعلى لإنشاء تقرير نتائج موثوق وجاهز للطباعة أو التصدير.</p>
+        </div>
+      `
       }
     </div>
-
-    ${
-      selectedChurch
-        ? `
-      <div class="p-header-box">
-        <div class="p-cross-symbol">✝ ⛪</div>
-        <h1>${escapeHtml(selectedChurch)}</h1>
-        <p>تقرير إحصائيات ونتائج الطلاب والأداء في الاختبارات والأنشطة الأسبوعية</p>
-      </div>
-
-      <div class="p-stats-bar">
-        <div class="p-stat-item">
-          <div class="lbl">إجمالي الناجحين</div>
-          <div class="val pass">${printData ? printData.totalPassed : 0}</div>
-        </div>
-        <div class="p-stat-item">
-          <div class="lbl">إجمالي غير الناجحين</div>
-          <div class="val fail">${printData ? printData.totalFailed : 0}</div>
-        </div>
-        <div class="p-stat-item">
-          <div class="lbl">إجمالي الطلاب المسجلين</div>
-          <div class="val total">${printData ? printData.totalStudents : 0}</div>
-        </div>
-      </div>
-
-      ${examsHtml || '<div class="a-empty-state"><i class="fa-solid fa-inbox"></i> لا توجد امتحانات أو نتائج registrada لهذه الكنيسة حالياً.</div>'}
-    `
-        : `
-      <div class="a-empty-state" style="padding: 3rem 1rem;">
-        <i class="fa-solid fa-church" style="font-size: 3rem; margin-bottom: 1rem; color: var(--a-text-soft);"></i>
-        <h2>يرجى اختيار الكنيسة من القائمة بالأعلى</h2>
-        <p>بعد اختيار الكنيسة، سيتم عرض تقرير كامل جاهز للطباعة والتصدير كـ PDF.</p>
-      </div>
-    `
-    }
   `;
 }
