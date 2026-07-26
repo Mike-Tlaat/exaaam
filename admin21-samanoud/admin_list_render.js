@@ -5,6 +5,7 @@ import {
   getPackageSelectionsBatch,
   getAllExams,
   deleteAttempt,
+  deletePackageSelectionsByFilter,
 } from "../includes/functions.js";
 import { CHURCHES_LIST } from "../includes/config.js";
 
@@ -254,6 +255,48 @@ export async function renderAdminAttemptsPage(tab) {
         font-family: inherit;
         font-size: 0.85rem;
       }
+
+      /* لوحة حذف الأنشطة والرياضات الجماعية */
+      .a-bulk-delete-box {
+        background: var(--a-bg-card, #1e293b);
+        border: 1px solid #ef444440;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-top: 1rem;
+      }
+      .a-bulk-delete-title {
+        font-size: 0.92rem;
+        font-weight: 800;
+        color: #f87171;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .a-bulk-delete-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      .a-bulk-del-action-btn {
+        background: #dc2626;
+        color: #ffffff;
+        border: none;
+        padding: 0.58rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s ease;
+      }
+      .a-bulk-del-action-btn:hover {
+        background: #b91c1c;
+      }
+
       @media (max-width: 768px) {
         .a-topbar {
           flex-direction: column;
@@ -276,6 +319,10 @@ export async function renderAdminAttemptsPage(tab) {
           flex: 1 1 100%;
         }
         .a-filter-bar button {
+          width: 100%;
+          justify-content: center;
+        }
+        .a-bulk-del-action-btn {
           width: 100%;
           justify-content: center;
         }
@@ -302,6 +349,7 @@ export async function renderAdminAttemptsPage(tab) {
       <a href="print.html" class="a-tab-btn" style="background:#0284c7; color:#fff;"><i class="fa-solid fa-print"></i> صفحة الطباعة و PDF</a>
     </div>
 
+    <!-- فلترة العرض -->
     <form class="a-filter-bar" method="GET">
       <div class="a-filter-item">
         <label style="font-size:.82rem;color:var(--a-text-soft);font-weight:700;"><i class="fa-solid fa-magnifying-glass"></i> بحث:</label>
@@ -339,6 +387,42 @@ export async function renderAdminAttemptsPage(tab) {
           : ""
       }
     </form>
+
+    <!-- أداة حذف نشاط أو رياضة جماعياً -->
+    <div class="a-bulk-delete-box">
+      <div class="a-bulk-delete-title">
+        <i class="fa-solid fa-trash-can"></i> أداة مسح نشاط/رياضة من امتحان وكنيسة معينة (أو كل الكنائس)
+      </div>
+      <div class="a-bulk-delete-grid">
+        <div class="a-filter-item">
+          <label style="font-size:.82rem;color:var(--a-text-soft);font-weight:700;"><i class="fa-solid fa-book-open"></i> الامتحان:</label>
+          <select id="bulk_del_exam">
+            <option value="">-- اختر الامتحان --</option>
+            ${examOptionsHtml}
+          </select>
+        </div>
+
+        <div class="a-filter-item">
+          <label style="font-size:.82rem;color:var(--a-text-soft);font-weight:700;"><i class="fa-solid fa-church"></i> الكنيسة:</label>
+          <select id="bulk_del_church">
+            <option value="ALL">-- كل الكنائس --</option>
+            ${churchOptionsHtml}
+          </select>
+        </div>
+
+        <div class="a-filter-item">
+          <label style="font-size:.82rem;color:var(--a-text-soft);font-weight:700;"><i class="fa-solid fa-running"></i> النشاط / الرياضة:</label>
+          <select id="bulk_del_item">
+            <option value="">-- اختر النشاط أو الرياضة --</option>
+            ${filterOptionsHtml}
+          </select>
+        </div>
+
+        <button type="button" class="a-bulk-del-action-btn" onclick="handleBulkDeletePackage()">
+          <i class="fa-solid fa-trash-can"></i> مسح النشاط
+        </button>
+      </div>
+    </div>
 
     ${
       attempts.length
@@ -379,6 +463,54 @@ export async function renderAdminAttemptsPage(tab) {
     } catch (err) {
       console.error(err);
       alert("حدث خطأ أثناء الحذف: " + (err.message || "يرجى التأكد من تشغيل أمر SQL الخاص بـ Policy الحذف"));
+    }
+  };
+
+  // دالة الحذف الجماعي للنشاط/الرياضة
+  window.handleBulkDeletePackage = async () => {
+    const examId = document.getElementById("bulk_del_exam").value;
+    const churchName = document.getElementById("bulk_del_church").value;
+    const rawItem = document.getElementById("bulk_del_item").value;
+
+    if (!examId) {
+      alert("يرجى اختيار الامتحان أولاً");
+      return;
+    }
+    if (!rawItem) {
+      alert("يرجى اختيار النشاط أو الرياضة المراد حذفها");
+      return;
+    }
+
+    let category = "";
+    let item = rawItem;
+    if (rawItem.includes("|||")) {
+      [category, item] = rawItem.split("|||");
+    }
+
+    const churchText =
+      !churchName || churchName === "ALL"
+        ? "جميع الكنائس"
+        : `كنيسة (${churchName})`;
+
+    const confirmed = confirm(
+      `هل أنت متأكد من حذف (${item}) لجميع الطلاب في هذا الامتحان لـ ${churchText}؟\nسيتم مسحها نهائياً ولن تظهر في كشوفات النتائج ولا في الطباعة.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const deletedCount = await deletePackageSelectionsByFilter(
+        category,
+        item,
+        examId,
+        churchName,
+      );
+      alert(
+        `تم حذف النشاط/الرياضة بنجاح!\nعدد الطلاب المحدثين: ${deletedCount}`
+      );
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء الحذف: " + (err.message || "خطأ غير معروف"));
     }
   };
 
