@@ -422,6 +422,40 @@ export async function getPackageSelectionsBatch(attemptIds) {
 }
 
 /* =======================================
+   مسح نشاط أو رياضة لامتحان وكنيسة معينة (أو كل الكنائس)
+======================================= */
+export async function removePackageItemFromExam(item, examId, churchName) {
+  if (!item || !examId) return 0;
+
+  let query = supabase
+    .from("attempts")
+    .select("id")
+    .eq("exam_id", Number(examId));
+
+  if (churchName && churchName !== "all" && churchName.trim() !== "") {
+    query = query.eq("user_church", churchName.trim());
+  }
+
+  const { data: attempts, error: attErr } = await query;
+  if (attErr) throw attErr;
+
+  if (!attempts || !attempts.length) return 0;
+
+  const attemptIds = attempts.map((a) => a.id);
+
+  const { data: deletedRows, error: delErr } = await supabase
+    .from("attempt_packages")
+    .delete()
+    .in("attempt_id", attemptIds)
+    .eq("item", item.trim())
+    .select();
+
+  if (delErr) throw delErr;
+
+  return deletedRows ? deletedRows.length : 0;
+}
+
+/* =======================================
    طباعة التقرير الكامل لكنيسة محددة
 ======================================= */
 export async function getChurchPrintData(churchName) {
