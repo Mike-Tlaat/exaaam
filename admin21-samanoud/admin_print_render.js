@@ -1,8 +1,8 @@
 import {
   getChurchPrintData,
-  getAllExams,
   loadPackages,
-  removePackageItemFromExam,
+  getAllExams,
+  deletePackageSelectionsByFilter,
 } from "../includes/functions.js";
 import { CHURCHES_LIST } from "../includes/config.js";
 
@@ -56,53 +56,13 @@ window.triggerChurchPrint = function (churchName) {
   window.print();
 };
 
-// دالة مسح activity/sport لامتحان معين لكنيسة معينة أو كل الكنائس
-window.handleRemoveActivity = async function () {
-  const examSelect = document.getElementById("delExamSelect");
-  const churchSelect = document.getElementById("delChurchSelect");
-  const itemSelect = document.getElementById("delItemSelect");
-
-  const examId = examSelect ? examSelect.value : "";
-  const churchName = churchSelect ? churchSelect.value : "";
-  const item = itemSelect ? itemSelect.value : "";
-
-  if (!examId) {
-    alert("يرجى اختيار الامتحان أولاً");
-    return;
-  }
-  if (!item) {
-    alert("يرجى اختيار النشاط أو الرياضة المراد مسحها");
-    return;
-  }
-
-  const examText = examSelect.selectedOptions[0]?.text || examId;
-  const churchText =
-    !churchName || churchName === "all" ? "كل الكنائس" : churchName;
-
-  const confirmMsg = `هل أنت متأكد من مسح (${item}) من امتحان (${examText}) بالنسبة لـ (${churchText})؟\n\nتنبيه: سيتم مسح هذا النشاط/الرياضة من كافة الطلاب المطابقين نهائياً ولن يظهر في الطباعة.`;
-
-  if (!confirm(confirmMsg)) return;
-
-  try {
-    const count = await removePackageItemFromExam(item, examId, churchName);
-    alert(`تم مسح النشاط/الرياضة بنجاح! عدد الطلاب الذين تم تعديل بياناتهم: ${count}`);
-    window.location.reload();
-  } catch (err) {
-    console.error("Error removing activity:", err);
-    alert("حدث خطأ أثناء تنفيذ الحذف: " + (err.message || "خطأ غير معروف"));
-  }
-};
-
 export async function renderAdminPrintPage() {
   const app = document.getElementById("app");
   const urlParams = new URLSearchParams(location.search);
   const selectedChurch = urlParams.get("church") || "";
 
-  // تحميل بيانات الامتحانات والأنشطة المتاحة لخيارات الحذف
-  const [allExams, packages] = await Promise.all([
-    getAllExams(),
-    loadPackages(),
-  ]);
+  // جلب بيانات البكدجات والامتحانات لأداة الحذف
+  const [packages, exams] = await Promise.all([loadPackages(), getAllExams()]);
 
   // تحديث عنوان الصفحة ديناميكياً لتسمية ملف PDF عند الحفظ
   if (selectedChurch) {
@@ -122,28 +82,20 @@ export async function renderAdminPrintPage() {
     return `<option value="${escapeHtml(church)}" ${selected}>${escapeHtml(church)}</option>`;
   }).join("");
 
-  // خيارات الامتحانات للحذف
-  const examOptionsForDelete = allExams
-    .map((ex) => `<option value="${ex.id}">${escapeHtml(ex.name)}</option>`)
+  const examOptionsHtml = exams
+    .map((exam) => `<option value="${exam.id}">${escapeHtml(exam.name)}</option>`)
     .join("");
 
-  // خيارات الكنائس للحذف
-  const churchOptionsForDelete = CHURCHES_LIST.map((church) => {
-    const selected = selectedChurch === church ? "selected" : "";
-    return `<option value="${escapeHtml(church)}" ${selected}>${escapeHtml(church)}</option>`;
-  }).join("");
-
-  // خيارات الأنشطة والألعاب للحذف
-  const packageItemsOptionsForDelete = Object.entries(packages)
+  const filterOptionsHtml = Object.entries(packages)
     .filter(([, items]) => items.length)
     .map(
       ([category, items]) => `
       <optgroup label="${escapeHtml(category)}">
         ${items
-          .map(
-            (item) =>
-              `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`,
-          )
+          .map((item) => {
+            const val = `${category}|||${item}`;
+            return `<option value="${escapeHtml(val)}">${escapeHtml(item)}</option>`;
+          })
           .join("")}
       </optgroup>`,
     )
@@ -254,7 +206,7 @@ export async function renderAdminPrintPage() {
         background: var(--a-bg-card, #1e293b);
         padding: 1.25rem 1.5rem;
         border-radius: 14px;
-        margin-bottom: 1.25rem;
+        margin-bottom: 1.5rem;
         display: flex;
         flex-wrap: wrap;
         gap: 1.25rem;
@@ -309,75 +261,67 @@ export async function renderAdminPrintPage() {
         transform: translateY(-2px);
       }
 
-      /* لوحة مسح الأنشطة/الرياضات */
+      /* لوحة حذف الأنشطة والرياضات */
       .p-delete-panel {
         background: var(--a-bg-card, #1e293b);
-        border: 1px solid var(--a-border, #334155);
+        border: 1px solid #ef444440;
         border-radius: 14px;
         padding: 1.25rem 1.5rem;
         margin-bottom: 2rem;
-        color: var(--a-text, #f8fafc);
       }
       .p-delete-title {
-        font-size: 1.05rem;
         font-weight: 800;
-        margin-bottom: 1rem;
+        font-size: 1rem;
         color: #f87171;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+      .p-delete-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+      }
+      .p-input-group {
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        flex: 1 1 220px;
       }
-      .p-delete-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1rem;
-        align-items: end;
-      }
-      .p-delete-field {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-      }
-      .p-delete-field label {
-        font-weight: 700;
+      .p-input-group label {
         font-size: 0.85rem;
-        color: var(--a-text, #f8fafc);
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
+        font-weight: 700;
+        color: var(--a-text-soft, #cbd5e1);
+        white-space: nowrap;
       }
-      .p-delete-field select {
+      .p-input-group select {
+        width: 100%;
         padding: 0.6rem 0.85rem;
-        border-radius: 10px;
+        border-radius: 8px;
         border: 1px solid var(--a-border, #334155);
         background: var(--a-bg, #0f172a);
         color: var(--a-text, #f8fafc);
         font-family: inherit;
         font-size: 0.88rem;
-        font-weight: 600;
-        outline: none;
-        width: 100%;
       }
-      .p-delete-submit-btn {
+      .p-delete-action-btn {
         background: #dc2626;
         color: #ffffff;
         border: none;
-        padding: 0.65rem 1.25rem;
-        border-radius: 10px;
+        padding: 0.65rem 1.5rem;
+        border-radius: 8px;
         font-weight: 800;
         font-size: 0.9rem;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        justify-content: center;
         gap: 0.5rem;
         transition: all 0.2s ease;
-        width: 100%;
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
       }
-      .p-delete-submit-btn:hover {
+      .p-delete-action-btn:hover {
         background: #b91c1c;
-        transform: translateY(-2px);
       }
 
       /* ورقة التقرير المطبوعة */
@@ -551,7 +495,7 @@ export async function renderAdminPrintPage() {
           print-color-adjust: exact !important;
         }
 
-        /* إخفاء عناصر واجهة الأدمن غير المطبوعة */
+        /* إخفاء عناصر واجهة الأدمن وأزرار الحذف نهائياً في الطباعة */
         .p-control-panel, .p-delete-panel, .a-topbar, .a-tabs-row, header, footer, nav {
           display: none !important;
         }
@@ -683,41 +627,39 @@ export async function renderAdminPrintPage() {
         }
       </div>
 
-      <!-- لوحة مسح نشاط أو رياضة من امتحان معين -->
+      <!-- لوحة حذف نشاط أو رياضة جماعياً -->
       <div class="p-delete-panel">
         <div class="p-delete-title">
-          <i class="fa-solid fa-eraser"></i> إدارة ومسح الأنشطة/الرياضات من الامتحانات
+          <i class="fa-solid fa-trash-can"></i> أداة حذف نشاط أو رياضة لامتحان وكنيسة محددة (أو جميع الكنائس)
         </div>
-        <div class="p-delete-grid">
-          <div class="p-delete-field">
-            <label><i class="fa-solid fa-book-bookmark"></i> اختر الامتحان:</label>
-            <select id="delExamSelect">
+        <div class="p-delete-form">
+          <div class="p-input-group">
+            <label><i class="fa-solid fa-book-open"></i> الامتحان:</label>
+            <select id="del_exam_id">
               <option value="">-- اختر الامتحان --</option>
-              ${examOptionsForDelete}
+              ${examOptionsHtml}
             </select>
           </div>
 
-          <div class="p-delete-field">
-            <label><i class="fa-solid fa-church"></i> اختر الكنيسة:</label>
-            <select id="delChurchSelect">
-              <option value="all">-- كل الكنائس --</option>
-              ${churchOptionsForDelete}
+          <div class="p-input-group">
+            <label><i class="fa-solid fa-church"></i> الكنيسة:</label>
+            <select id="del_church_name">
+              <option value="ALL">-- جميع الكنائس --</option>
+              ${churchOptionsHtml}
             </select>
           </div>
 
-          <div class="p-delete-field">
-            <label><i class="fa-solid fa-volleyball"></i> اختر النشاط / الرياضة:</label>
-            <select id="delItemSelect">
+          <div class="p-input-group">
+            <label><i class="fa-solid fa-running"></i> النشاط / الرياضة:</label>
+            <select id="del_package_item">
               <option value="">-- اختر النشاط أو الرياضة --</option>
-              ${packageItemsOptionsForDelete}
+              ${filterOptionsHtml}
             </select>
           </div>
 
-          <div class="p-delete-field">
-            <button type="button" class="p-delete-submit-btn" onclick="window.handleRemoveActivity()">
-              <i class="fa-solid fa-trash-can"></i> مسح النشاط/الرياضة
-            </button>
-          </div>
+          <button type="button" class="p-delete-action-btn" onclick="window.handleDeletePackage()">
+            <i class="fa-solid fa-trash-can"></i> مسح النشاط
+          </button>
         </div>
       </div>
 
@@ -762,4 +704,51 @@ export async function renderAdminPrintPage() {
       }
     </div>
   `;
+
+  // دالة التعامل مع حذف النشاط من الواجهة
+  window.handleDeletePackage = async function () {
+    const examId = document.getElementById("del_exam_id").value;
+    const churchName = document.getElementById("del_church_name").value;
+    const rawItem = document.getElementById("del_package_item").value;
+
+    if (!examId) {
+      alert("يرجى اختيار الامتحان أولاً");
+      return;
+    }
+    if (!rawItem) {
+      alert("يرجى اختيار النشاط أو الرياضة المراد حذفها");
+      return;
+    }
+
+    let category = "";
+    let item = rawItem;
+    if (rawItem.includes("|||")) {
+      [category, item] = rawItem.split("|||");
+    }
+
+    const churchText =
+      !churchName || churchName === "ALL"
+        ? "جميع الكنائس"
+        : `كنيسة (${churchName})`;
+
+    const confirmMsg = `هل أنت متأكد من حذف (${item}) لجميع الطلاب المتقدمين في هذا الامتحان لـ ${churchText}؟\n\nلن يظهر هذا النشاط في كشوفات الطباعة نهائياً بعد الحذف.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const deletedCount = await deletePackageSelectionsByFilter(
+        category,
+        item,
+        examId,
+        churchName,
+      );
+      alert(
+        `تم حذف النشاط/الرياضة بنجاح!\nإجمالي عدد الطلاب الذين تم مسح النشاط لهم: ${deletedCount}`,
+      );
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء الحذف: " + (err.message || "خطأ غير معروف"));
+    }
+  };
 }
