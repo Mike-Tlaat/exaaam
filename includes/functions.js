@@ -293,6 +293,96 @@ export async function deleteAttempt(attemptId) {
 }
 
 /* =======================================
+   جلب وعد المحاولات للقوائم
+======================================= */
+export async function countAttemptsByPassFail(
+  passFail,
+  category,
+  item,
+  church,
+  examId,
+  search,
+) {
+  let query = supabase
+    .from("attempts")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["submitted", "graded"]);
+
+  if (passFail) query = query.eq("pass_fail", passFail);
+  if (church) query = query.eq("user_church", church);
+  if (examId) query = query.eq("exam_id", Number(examId));
+  if (search) {
+    query = query.or(`user_name.ilike.%${search}%,user_phone.ilike.%${search}%`);
+  }
+
+  if (category && item) {
+    const { data: pkgs } = await supabase
+      .from("attempt_packages")
+      .select("attempt_id")
+      .eq("category", category)
+      .eq("item", item);
+
+    const attIds = (pkgs || []).map((p) => p.attempt_id);
+    if (!attIds.length) return 0;
+    query = query.in("id", attIds);
+  }
+
+  const { count, error } = await query;
+  if (error) console.error("Error counting attempts:", error);
+  return count || 0;
+}
+
+export async function getAttemptsByPassFail(
+  passFail,
+  category,
+  item,
+  church,
+  examId,
+  limit,
+  offset,
+  search,
+) {
+  let query = supabase
+    .from("attempts")
+    .select("*, exams(name)")
+    .in("status", ["submitted", "graded"]);
+
+  if (passFail) query = query.eq("pass_fail", passFail);
+  if (church) query = query.eq("user_church", church);
+  if (examId) query = query.eq("exam_id", Number(examId));
+  if (search) {
+    query = query.or(`user_name.ilike.%${search}%,user_phone.ilike.%${search}%`);
+  }
+
+  if (category && item) {
+    const { data: pkgs } = await supabase
+      .from("attempt_packages")
+      .select("attempt_id")
+      .eq("category", category)
+      .eq("item", item);
+
+    const attIds = (pkgs || []).map((p) => p.attempt_id);
+    if (!attIds.length) return [];
+    query = query.in("id", attIds);
+  }
+
+  query = query
+    .order("id", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Error fetching attempts:", error);
+    return [];
+  }
+
+  return (data || []).map((a) => ({
+    ...a,
+    exam_name: a.exams?.name || `امتحان ${a.exam_id}`,
+  }));
+}
+
+/* =======================================
    نظام اختيار الأنشطة (مع إزالة التكرار)
 ======================================= */
 export function getPackageCategories() {
@@ -340,7 +430,6 @@ export async function savePackageSelections(
     if (!Array.isArray(chosen)) chosen = chosen ? [chosen] : [];
 
     const validItems = available[category] || [];
-    // منع تكرار العنصر نفسه لنفس المستخدم
     chosen = [
       ...new Set(
         chosen
@@ -412,47 +501,12 @@ export async function getPackageSelectionsBatch(attemptIds) {
     if (!result[row.attempt_id][row.category])
       result[row.attempt_id][row.category] = [];
 
-    // إستبعاد أي تكرار للعنصر
     if (!result[row.attempt_id][row.category].includes(row.item)) {
       result[row.attempt_id][row.category].push(row.item);
     }
   });
 
   return result;
-}
-
-/* =======================================
-   مسح نشاط أو رياضة لامتحان وكنيسة معينة (أو كل الكنائس)
-======================================= */
-export async function removePackageItemFromExam(item, examId, churchName) {
-  if (!item || !examId) return 0;
-
-  let query = supabase
-    .from("attempts")
-    .select("id")
-    .eq("exam_id", Number(examId));
-
-  if (churchName && churchName !== "all" && churchName.trim() !== "") {
-    query = query.eq("user_church", churchName.trim());
-  }
-
-  const { data: attempts, error: attErr } = await query;
-  if (attErr) throw attErr;
-
-  if (!attempts || !attempts.length) return 0;
-
-  const attemptIds = attempts.map((a) => a.id);
-
-  const { data: deletedRows, error: delErr } = await supabase
-    .from("attempt_packages")
-    .delete()
-    .in("attempt_id", attemptIds)
-    .eq("item", item.trim())
-    .select();
-
-  if (delErr) throw delErr;
-
-  return deletedRows ? deletedRows.length : 0;
 }
 
 /* =======================================
@@ -532,4 +586,63 @@ export async function getChurchPrintData(churchName) {
     totalStudents: allAttempts.length,
     examsData: activeExamsData,
   };
+}
+
+/* =======================================
+   حذف نشاط أو رياضة جماعياً حسب الامتحان والكنيسة
+======================================= */
+export async function deletePackageSelectionsByFilter(
+  category,
+  item,
+  examId,
+  churchName,
+) {
+  if (!item) {
+    throw new Error("يرجى تحديد النشاط أو الرياضة المراد حذفها");
+  }
+
+  // 1. جلب المحاولات المطابقة لشرط الامتحان والكنيسة
+  let query = supabase.from("attempts").select("id");
+
+  if (examId) {
+    query = query.eq("exam_id", Number(examId));
+  }
+
+  if (churchName && churchName.trim() !== "" && churchName !== "ALL") {
+    query = query.eq("user_church", churchName.trim());
+  }
+
+  const { data: attempts, error: attErr } = await query;
+  if (attErr) throw attErr;
+
+  if (!attempts || !attempts.length) {
+    return 0;
+  }
+
+  const attemptIds = attempts.map((a) => a.id);
+
+  // 2. حذف السجلات المطابقة من جدول attempt_packages
+  const CHUNK_SIZE = 200;
+  let totalDeleted = 0;
+
+  for (let i = 0; i < attemptIds.length; i += CHUNK_SIZE) {
+    const chunk = attemptIds.slice(i, i + CHUNK_SIZE);
+
+    let delQuery = supabase
+      .from("attempt_packages")
+      .delete({ count: "exact" })
+      .in("attempt_id", chunk)
+      .eq("item", item);
+
+    if (category) {
+      delQuery = delQuery.eq("category", category);
+    }
+
+    const { error: delErr, count } = await delQuery;
+    if (delErr) throw delErr;
+
+    totalDeleted += count || 0;
+  }
+
+  return totalDeleted;
 }
