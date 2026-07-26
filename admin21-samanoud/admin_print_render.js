@@ -14,7 +14,6 @@ function formatActivities(pkgObj) {
     (item) => item !== "مسابقات رياضية",
   );
 
-  // إزالة أي عنصر مكرر باستخدام Set
   const uniqueActivities = [...new Set(rawActivities)];
 
   if (!uniqueActivities.length) {
@@ -32,7 +31,6 @@ function formatGames(pkgObj) {
   const single = pkgObj["اللعب الفردي"] || [];
   const group = pkgObj["اللعب الجماعي"] || [];
 
-  // دمج القوائم وتنبيذ العناصر المكررة تماماً
   const uniqueGames = [...new Set([...single, ...group])];
 
   if (!uniqueGames.length) {
@@ -44,10 +42,27 @@ function formatGames(pkgObj) {
     .join(" ");
 }
 
+// دالة تشغيل الطباعة وتسمية ملف PDF باسم الكنيسة
+window.triggerChurchPrint = function (churchName) {
+  if (churchName) {
+    const cleanName = churchName.replace(/[/\\?%*:|"<>]/g, "").trim();
+    document.title = `كشف_نتائج_${cleanName}`;
+  }
+  window.print();
+};
+
 export async function renderAdminPrintPage() {
   const app = document.getElementById("app");
   const urlParams = new URLSearchParams(location.search);
   const selectedChurch = urlParams.get("church") || "";
+
+  // تحديث عنوان الصفحة ديناميكياً لتسمية ملف PDF عند الحفظ
+  if (selectedChurch) {
+    const cleanChurch = selectedChurch.replace(/[/\\?%*:|"<>]/g, "").trim();
+    document.title = `كشف_نتائج_${cleanChurch}`;
+  } else {
+    document.title = "تقارير_طباعة_الكنائس";
+  }
 
   let printData = null;
   if (selectedChurch) {
@@ -159,7 +174,7 @@ export async function renderAdminPrintPage() {
         direction: rtl;
       }
 
-      /* شريط التحكم بالطباعة بالاقتراحات */
+      /* شريط التحكم بالطباعة */
       .p-control-panel {
         background: var(--a-bg-card, #1e293b);
         padding: 1.25rem 1.5rem;
@@ -229,16 +244,16 @@ export async function renderAdminPrintPage() {
         box-shadow: 0 10px 30px rgba(0,0,0,0.04);
       }
       
-      /* هيدر الكنيسة الأنيق مع شعار الصليب */
+      /* هيدر الكنيسة */
       .p-church-header {
         text-align: center;
-        padding-bottom: 1.5rem;
-        border-bottom: 2px solid #e2e8f0;
-        margin-bottom: 1.75rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 2px solid #0f172a;
+        margin-bottom: 1.5rem;
       }
       .p-cross-emblem {
-        width: 56px;
-        height: 56px;
+        width: 52px;
+        height: 52px;
         background: #f0f9ff;
         color: #0284c7;
         border: 2px solid #0284c7;
@@ -246,36 +261,34 @@ export async function renderAdminPrintPage() {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.6rem;
-        margin-bottom: 0.75rem;
-        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
       }
       .p-church-header h1 {
         margin: 0.2rem 0;
         font-size: 1.85rem;
         font-weight: 900;
         color: #0f172a;
-        letter-spacing: -0.5px;
       }
       .p-church-header p {
         margin: 0;
-        color: #64748b;
+        color: #475569;
         font-size: 0.95rem;
         font-weight: 700;
       }
 
-      /* كروت الإحصائيات */
+      /* بطاقات الإحصائيات */
       .p-metrics-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 1.25rem;
-        margin-bottom: 2.25rem;
+        margin-bottom: 2rem;
       }
       .p-metric-card {
         background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        border: 1px solid #cbd5e1;
         border-radius: 12px;
-        padding: 1.1rem 1.25rem;
+        padding: 1rem 1.25rem;
         text-align: center;
       }
       .p-metric-card .title {
@@ -297,28 +310,27 @@ export async function renderAdminPrintPage() {
       .p-metric-card.fail .number { color: #b91c1c; }
       .p-metric-card.total .number { color: #0369a1; }
 
-      /* جداول وتقسيمات الامتحانات */
+      /* تقارير الامتحانات */
       .p-exam-card {
-        margin-bottom: 2.5rem;
-        page-break-inside: avoid;
+        margin-bottom: 2.25rem;
       }
       .p-exam-header {
         background: #0f172a;
         color: #ffffff;
-        padding: 0.85rem 1.25rem;
-        border-radius: 10px;
-        font-size: 1.15rem;
+        padding: 0.8rem 1.25rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
         font-weight: 800;
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        margin-bottom: 1.25rem;
+        margin-bottom: 1rem;
       }
       .p-section-divider {
-        font-size: 1rem;
+        font-size: 0.95rem;
         font-weight: 800;
-        margin: 1.5rem 0 0.85rem 0;
-        padding-right: 0.85rem;
+        margin: 1.25rem 0 0.75rem 0;
+        padding-right: 0.75rem;
         border-right: 4px solid #16a34a;
         color: #0f172a;
         display: flex;
@@ -329,20 +341,20 @@ export async function renderAdminPrintPage() {
       .p-report-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 1.5rem;
-        font-size: 0.9rem;
+        margin-bottom: 1.25rem;
+        font-size: 0.88rem;
       }
       .p-report-table th {
         background: #f1f5f9;
-        color: #1e293b;
+        color: #0f172a;
         font-weight: 800;
         border: 1px solid #cbd5e1;
-        padding: 0.75rem 0.85rem;
+        padding: 0.7rem 0.75rem;
         text-align: right;
       }
       .p-report-table td {
         border: 1px solid #e2e8f0;
-        padding: 0.65rem 0.85rem;
+        padding: 0.6rem 0.75rem;
         text-align: right;
         vertical-align: middle;
       }
@@ -350,12 +362,12 @@ export async function renderAdminPrintPage() {
         background: #f8fafc;
       }
       .col-num { text-align: center !important; font-weight: 800; color: #64748b; }
-      .col-phone { direction: ltr; text-align: right !important; font-family: monospace; font-size: 0.95rem; font-weight: 600; }
+      .col-phone { direction: ltr; text-align: right !important; font-family: monospace; font-size: 0.92rem; font-weight: 600; }
 
       /* البادجات والأنشطة */
       .p-grade-badge {
         display: inline-block;
-        padding: 4px 12px;
+        padding: 3px 10px;
         border-radius: 6px;
         font-size: 0.82rem;
         font-weight: 800;
@@ -365,23 +377,26 @@ export async function renderAdminPrintPage() {
 
       .p-chip {
         display: inline-block;
-        padding: 3px 10px;
+        padding: 3px 9px;
         border-radius: 6px;
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         font-weight: 700;
         margin: 2px;
       }
       .p-chip.activity { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
       .p-chip.game { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
       .p-no-item { color: #94a3b8; font-style: italic; font-size: 0.85rem; }
-      .p-empty-row { text-align: center !important; color: #94a3b8; font-style: italic; padding: 1.5rem !important; }
+      .p-empty-row { text-align: center !important; color: #94a3b8; font-style: italic; padding: 1.25rem !important; }
 
-      /* تنسيقات واضحة ودقيقة جداً عند الطباعة اليدوية أو تصدير PDF */
+      /* ========================================================
+         تنسيقات الطباعة الاحترافية والـ PDF الصارمة
+      ======================================================== */
       @media print {
         @page {
           size: A4 portrait;
-          margin: 10mm;
+          margin: 12mm 10mm 12mm 10mm;
         }
+
         body {
           background: #ffffff !important;
           color: #000000 !important;
@@ -389,20 +404,108 @@ export async function renderAdminPrintPage() {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
-        .a-shell { padding: 0 !important; max-width: 100% !important; }
-        .p-control-panel, .a-topbar, .a-tabs-row { display: none !important; }
-        .p-report-container { border: none !important; box-shadow: none !important; padding: 0 !important; }
-        .p-church-header { border-bottom: 2px solid #000000 !important; }
-        .p-cross-emblem { border-color: #000000 !important; color: #000000 !important; background: transparent !important; }
-        .p-metric-card { border: 1px solid #000000 !important; background: #ffffff !important; }
-        .p-metric-card .number { color: #000000 !important; }
-        .p-exam-header { background: #0f172a !important; color: #ffffff !important; }
-        .p-report-table th { background: #e2e8f0 !important; color: #000000 !important; border: 1px solid #000000 !important; font-weight: 900 !important; }
-        .p-report-table td { border: 1px solid #475569 !important; color: #000000 !important; font-weight: 700 !important; }
-        .p-grade-badge { border: 1px solid #000000 !important; font-weight: 900 !important; }
-        .p-chip { border: 1px solid #64748b !important; color: #000000 !important; background: #f1f5f9 !important; font-weight: 800 !important; }
-        tr { page-break-inside: avoid !important; }
-        .p-exam-card { page-break-inside: avoid !important; }
+
+        /* إخفاء عناصر واجهة الأدمن غير المطبوعة */
+        .p-control-panel, .a-topbar, .a-tabs-row, header, footer, nav {
+          display: none !important;
+        }
+
+        .print-page-wrapper {
+          padding: 0 !important;
+          margin: 0 !important;
+          width: 100% !important;
+        }
+
+        .p-report-container {
+          border: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          width: 100% !important;
+        }
+
+        .p-church-header {
+          border-bottom: 2px solid #000000 !important;
+          padding-bottom: 10px !important;
+          margin-bottom: 14px !important;
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+        }
+
+        .p-cross-emblem {
+          border-color: #000000 !important;
+          color: #000000 !important;
+          background: transparent !important;
+        }
+
+        .p-metrics-grid {
+          margin-bottom: 16px !important;
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+
+        .p-metric-card {
+          border: 1px solid #000000 !important;
+          background: #f8fafc !important;
+        }
+
+        .p-metric-card .number {
+          color: #000000 !important;
+        }
+
+        .p-exam-card {
+          margin-bottom: 20px !important;
+          break-inside: auto !important;
+        }
+
+        .p-exam-header {
+          background: #0f172a !important;
+          color: #ffffff !important;
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+        }
+
+        .p-section-divider {
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+          color: #000000 !important;
+          font-weight: 900 !important;
+        }
+
+        .p-report-table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+          margin-bottom: 12px !important;
+        }
+
+        .p-report-table th {
+          background: #e2e8f0 !important;
+          color: #000000 !important;
+          border: 1px solid #000000 !important;
+          font-weight: 900 !important;
+        }
+
+        .p-report-table td {
+          border: 1px solid #475569 !important;
+          color: #000000 !important;
+          font-weight: 700 !important;
+        }
+
+        .p-report-table tr {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+
+        .p-grade-badge {
+          border: 1px solid #000000 !important;
+          font-weight: 900 !important;
+        }
+
+        .p-chip {
+          border: 1px solid #475569 !important;
+          color: #000000 !important;
+          background: #f1f5f9 !important;
+          font-weight: 800 !important;
+        }
       }
     </style>
 
@@ -410,7 +513,7 @@ export async function renderAdminPrintPage() {
       <div class="a-topbar">
         <div>
           <h1><i class="fa-solid fa-print"></i> تقارير طباعة الكنائس الاحترافية</h1>
-          <p>عرض نتائج الدرجات والأنشطة بدون أي تكرار وبأعلى دقة للطباعة والـ PDF</p>
+          <p>تصدير واستخراج كشوفات النتائج والأنشطة بصيغة PDF عالية الجودة</p>
         </div>
         <div>
           <a href="passed.html" class="a-tab-btn" style="text-decoration:none;"><i class="fa-solid fa-arrow-right"></i> لوحة التحكم</a>
@@ -428,7 +531,7 @@ export async function renderAdminPrintPage() {
 
         ${
           selectedChurch
-            ? `<button class="p-print-btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> طباعة / حفظ كملف PDF</button>`
+            ? `<button class="p-print-btn" onclick="window.triggerChurchPrint('${escapeHtml(selectedChurch)}')"><i class="fa-solid fa-file-pdf"></i> طباعة / حفظ كملف PDF</button>`
             : ""
         }
       </div>
