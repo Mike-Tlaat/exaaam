@@ -543,7 +543,7 @@ export async function renderAdminPrintPage() {
           <div class="p-church-header">
             <div class="p-cross-emblem"><i class="fa-solid fa-cross"></i></div>
             <h1>${escapeHtml(selectedChurch)}</h1>
-            <p>تقرير معتمد لنتائج كشف الاختبارات والأنشطة الأسبوعية</p>
+            <p>تقرير معتمد لنتائج كشف الاختبارات </p>
           </div>
 
           <div class="p-metrics-grid">
