@@ -1,4 +1,9 @@
-import { getChurchPrintData } from "../includes/functions.js";
+import {
+  getChurchPrintData,
+  getAllExams,
+  loadPackages,
+  removePackageItemFromExam,
+} from "../includes/functions.js";
 import { CHURCHES_LIST } from "../includes/config.js";
 
 function escapeHtml(str) {
@@ -51,10 +56,53 @@ window.triggerChurchPrint = function (churchName) {
   window.print();
 };
 
+// دالة مسح activity/sport لامتحان معين لكنيسة معينة أو كل الكنائس
+window.handleRemoveActivity = async function () {
+  const examSelect = document.getElementById("delExamSelect");
+  const churchSelect = document.getElementById("delChurchSelect");
+  const itemSelect = document.getElementById("delItemSelect");
+
+  const examId = examSelect ? examSelect.value : "";
+  const churchName = churchSelect ? churchSelect.value : "";
+  const item = itemSelect ? itemSelect.value : "";
+
+  if (!examId) {
+    alert("يرجى اختيار الامتحان أولاً");
+    return;
+  }
+  if (!item) {
+    alert("يرجى اختيار النشاط أو الرياضة المراد مسحها");
+    return;
+  }
+
+  const examText = examSelect.selectedOptions[0]?.text || examId;
+  const churchText =
+    !churchName || churchName === "all" ? "كل الكنائس" : churchName;
+
+  const confirmMsg = `هل أنت متأكد من مسح (${item}) من امتحان (${examText}) بالنسبة لـ (${churchText})؟\n\nتنبيه: سيتم مسح هذا النشاط/الرياضة من كافة الطلاب المطابقين نهائياً ولن يظهر في الطباعة.`;
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const count = await removePackageItemFromExam(item, examId, churchName);
+    alert(`تم مسح النشاط/الرياضة بنجاح! عدد الطلاب الذين تم تعديل بياناتهم: ${count}`);
+    window.location.reload();
+  } catch (err) {
+    console.error("Error removing activity:", err);
+    alert("حدث خطأ أثناء تنفيذ الحذف: " + (err.message || "خطأ غير معروف"));
+  }
+};
+
 export async function renderAdminPrintPage() {
   const app = document.getElementById("app");
   const urlParams = new URLSearchParams(location.search);
   const selectedChurch = urlParams.get("church") || "";
+
+  // تحميل بيانات الامتحانات والأنشطة المتاحة لخيارات الحذف
+  const [allExams, packages] = await Promise.all([
+    getAllExams(),
+    loadPackages(),
+  ]);
 
   // تحديث عنوان الصفحة ديناميكياً لتسمية ملف PDF عند الحفظ
   if (selectedChurch) {
@@ -73,6 +121,33 @@ export async function renderAdminPrintPage() {
     const selected = selectedChurch === church ? "selected" : "";
     return `<option value="${escapeHtml(church)}" ${selected}>${escapeHtml(church)}</option>`;
   }).join("");
+
+  // خيارات الامتحانات للحذف
+  const examOptionsForDelete = allExams
+    .map((ex) => `<option value="${ex.id}">${escapeHtml(ex.name)}</option>`)
+    .join("");
+
+  // خيارات الكنائس للحذف
+  const churchOptionsForDelete = CHURCHES_LIST.map((church) => {
+    const selected = selectedChurch === church ? "selected" : "";
+    return `<option value="${escapeHtml(church)}" ${selected}>${escapeHtml(church)}</option>`;
+  }).join("");
+
+  // خيارات الأنشطة والألعاب للحذف
+  const packageItemsOptionsForDelete = Object.entries(packages)
+    .filter(([, items]) => items.length)
+    .map(
+      ([category, items]) => `
+      <optgroup label="${escapeHtml(category)}">
+        ${items
+          .map(
+            (item) =>
+              `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`,
+          )
+          .join("")}
+      </optgroup>`,
+    )
+    .join("");
 
   let examsHtml = "";
   if (printData && printData.examsData.length) {
@@ -179,7 +254,7 @@ export async function renderAdminPrintPage() {
         background: var(--a-bg-card, #1e293b);
         padding: 1.25rem 1.5rem;
         border-radius: 14px;
-        margin-bottom: 2rem;
+        margin-bottom: 1.25rem;
         display: flex;
         flex-wrap: wrap;
         gap: 1.25rem;
@@ -231,6 +306,77 @@ export async function renderAdminPrintPage() {
       }
       .p-print-btn:hover {
         background: #0369a1;
+        transform: translateY(-2px);
+      }
+
+      /* لوحة مسح الأنشطة/الرياضات */
+      .p-delete-panel {
+        background: var(--a-bg-card, #1e293b);
+        border: 1px solid var(--a-border, #334155);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 2rem;
+        color: var(--a-text, #f8fafc);
+      }
+      .p-delete-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: #f87171;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .p-delete-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        align-items: end;
+      }
+      .p-delete-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+      .p-delete-field label {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--a-text, #f8fafc);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .p-delete-field select {
+        padding: 0.6rem 0.85rem;
+        border-radius: 10px;
+        border: 1px solid var(--a-border, #334155);
+        background: var(--a-bg, #0f172a);
+        color: var(--a-text, #f8fafc);
+        font-family: inherit;
+        font-size: 0.88rem;
+        font-weight: 600;
+        outline: none;
+        width: 100%;
+      }
+      .p-delete-submit-btn {
+        background: #dc2626;
+        color: #ffffff;
+        border: none;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        width: 100%;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+      }
+      .p-delete-submit-btn:hover {
+        background: #b91c1c;
         transform: translateY(-2px);
       }
 
@@ -406,7 +552,7 @@ export async function renderAdminPrintPage() {
         }
 
         /* إخفاء عناصر واجهة الأدمن غير المطبوعة */
-        .p-control-panel, .a-topbar, .a-tabs-row, header, footer, nav {
+        .p-control-panel, .p-delete-panel, .a-topbar, .a-tabs-row, header, footer, nav {
           display: none !important;
         }
 
@@ -520,6 +666,7 @@ export async function renderAdminPrintPage() {
         </div>
       </div>
 
+      <!-- شريط اختيار الكنيسة للطباعة -->
       <div class="p-control-panel">
         <form class="p-select-group" method="GET">
           <label><i class="fa-solid fa-church"></i> اختر الكنيسة:</label>
@@ -534,6 +681,44 @@ export async function renderAdminPrintPage() {
             ? `<button class="p-print-btn" onclick="window.triggerChurchPrint('${escapeHtml(selectedChurch)}')"><i class="fa-solid fa-file-pdf"></i> طباعة / حفظ كملف PDF</button>`
             : ""
         }
+      </div>
+
+      <!-- لوحة مسح نشاط أو رياضة من امتحان معين -->
+      <div class="p-delete-panel">
+        <div class="p-delete-title">
+          <i class="fa-solid fa-eraser"></i> إدارة ومسح الأنشطة/الرياضات من الامتحانات
+        </div>
+        <div class="p-delete-grid">
+          <div class="p-delete-field">
+            <label><i class="fa-solid fa-book-bookmark"></i> اختر الامتحان:</label>
+            <select id="delExamSelect">
+              <option value="">-- اختر الامتحان --</option>
+              ${examOptionsForDelete}
+            </select>
+          </div>
+
+          <div class="p-delete-field">
+            <label><i class="fa-solid fa-church"></i> اختر الكنيسة:</label>
+            <select id="delChurchSelect">
+              <option value="all">-- كل الكنائس --</option>
+              ${churchOptionsForDelete}
+            </select>
+          </div>
+
+          <div class="p-delete-field">
+            <label><i class="fa-solid fa-volleyball"></i> اختر النشاط / الرياضة:</label>
+            <select id="delItemSelect">
+              <option value="">-- اختر النشاط أو الرياضة --</option>
+              ${packageItemsOptionsForDelete}
+            </select>
+          </div>
+
+          <div class="p-delete-field">
+            <button type="button" class="p-delete-submit-btn" onclick="window.handleRemoveActivity()">
+              <i class="fa-solid fa-trash-can"></i> مسح النشاط/الرياضة
+            </button>
+          </div>
+        </div>
       </div>
 
       ${
