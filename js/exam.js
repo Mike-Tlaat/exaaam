@@ -1,6 +1,6 @@
 // js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
 
-import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, PACKAGE_CATEGORIES } from "../includes/config.js?v=2.0.0";
+import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, PACKAGE_CATEGORIES } from "../includes/config.js?v=5.0.0";
 import {
   getExamBySlug,
   getExamById,
