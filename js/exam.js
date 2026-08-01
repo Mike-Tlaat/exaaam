@@ -381,47 +381,6 @@ function collectSelections(container) {
 }
 
 /* =======================================
-   دالة خلط الأسئلة عشوائياً حسب النوع ورقم المحاولة
-======================================= */
-function shuffleQuestionsByType(questionsList, seed) {
-  if (!Array.isArray(questionsList) || !questionsList.length) return [];
-
-  // 1. تجميع الأسئلة حسب النوع مع الحفاظ على ترتيب الأنواع الأصلي
-  const typeGroups = [];
-  const typeMap = new Map();
-
-  questionsList.forEach((q) => {
-    const qType = q.type || "unknown";
-    if (!typeMap.has(qType)) {
-      const newGroup = { type: qType, items: [] };
-      typeMap.set(qType, newGroup);
-      typeGroups.push(newGroup);
-    }
-    typeMap.get(qType).items.push(q);
-  });
-
-  // 2. مولد أرقام عشوائية معتمد على رقم المحاولة (Seed) لضمان اختلاف الترتيب لكل طالب وثباته لنفس الطالب عند التحديث
-  let currentSeed = Number(seed) || 12345;
-  function nextRandom() {
-    currentSeed = (currentSeed * 9301 + 49297) % 233280;
-    return currentSeed / 233280;
-  }
-
-  // 3. خلط أسئلة كل نوع بمفردها (Fisher-Yates Shuffle)
-  const result = [];
-  typeGroups.forEach((group) => {
-    const arr = [...group.items];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(nextRandom() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    result.push(...arr);
-  });
-
-  return result;
-}
-
-/* =======================================
    المرحلة 3: الامتحان المباشر
 ======================================= */
 let questions = [];
@@ -440,11 +399,18 @@ async function startExam() {
   const updatedAttempt = await getAttempt(attemptId);
   if (updatedAttempt) currentAttempt = updatedAttempt;
 
-  const rawQuestions = (await loadQuestions(currentExam.json_file)) || [];
-  // تطبيق الترتيب العشوائي للأسئلة لكل طالب حسب نوع كل سؤال ورقم محاولته
-  questions = shuffleQuestionsByType(rawQuestions, attemptId);
+  questions = (await loadQuestions(currentExam.json_file)) || [];
 
+  // تعبئة عنوان الامتحان
   document.getElementById("examTitle").textContent = currentExam.name;
+
+  // عرض صفة الامتحان (خدام - إعداد خدام - جامعة - خريجين) بخط ثانوي
+  const stageEl = document.getElementById("examStage");
+  if (stageEl) {
+    const stageVal = currentExam.stage || currentExam.category || "";
+    stageEl.textContent = stageVal ? `(${stageVal})` : "";
+  }
+
   document.getElementById("userNameTag").textContent = currentAttempt.user_name;
   document.getElementById("userPhoneTag").textContent = currentAttempt.user_phone;
 
@@ -701,13 +667,8 @@ async function submitExam(isTimeOut) {
   }
   if (errorBox) errorBox.classList.add("hidden");
 
-  /* -------------------------------------------------------------
-     🔥 خوارزمية الطابور والتتابع (Submission Staggering Queue):
-     تمنع تصادم الطلبات عند تسليم 1500 طالب في نفس الملي ثانية.
-     تُعطي كل طالب شريحة زَمَنية (Time Slot) بناءً على رقم محاولته (Attempt ID).
-  ------------------------------------------------------------- */
-  const baseSlot = (Number(attemptId) % 60) * 150; // تقسيم الطلاب على 60 شريحة زَمَنية (150ms بين كل شريحة)
-  const randomJitter = Math.floor(Math.random() * 250); // عشوائية لمنع تزامن نفس الشريحة
+  const baseSlot = (Number(attemptId) % 60) * 150;
+  const randomJitter = Math.floor(Math.random() * 250);
   const calculatedQueueDelay = isTimeOut ? baseSlot + randomJitter : randomJitter;
 
   if (calculatedQueueDelay > 0) {
@@ -718,9 +679,6 @@ async function submitExam(isTimeOut) {
     submitBtn.textContent = "جاري إرسال إجاباتك ولحفظ النتائج...";
   }
 
-  /* -------------------------------------------------------------
-     🔄 آلية المحاولة التلقائية عند الضغط العالي (Exponential Retry)
-  ------------------------------------------------------------- */
   const maxRetries = 5;
   let attempt = 0;
   let success = false;
@@ -737,14 +695,12 @@ async function submitExam(isTimeOut) {
         if (submitBtn) {
           submitBtn.textContent = `السيرفر مكتظ، جاري إرسال إجاباتك تلقائياً (محاولة ${attempt}/${maxRetries})...`;
         }
-        // انتظار تصاعدي مضاف إليه عشوائية لتخفيف الحمل عن السيرفر
         const retryDelay = Math.pow(2, attempt) * 800 + Math.floor(Math.random() * 400);
         await new Promise((res) => setTimeout(res, retryDelay));
       }
     }
   }
 
-  // 3. المعالجة النهائية
   if (success) {
     localStorage.removeItem(answersStorageKey());
     localStorage.removeItem(attemptStorageKey(currentExam.id));
@@ -752,7 +708,7 @@ async function submitExam(isTimeOut) {
     
     window.location.href = `results.html?attempt=${attemptId}`;
   } else {
-    isSubmittingLock = false; // فك القفل للسماح بإعادة المحاولة اليدوية
+    isSubmittingLock = false;
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = "🔄 إعادة محاولة التسليم الآن";
