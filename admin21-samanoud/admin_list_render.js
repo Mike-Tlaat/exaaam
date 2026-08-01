@@ -157,10 +157,8 @@ export async function renderAdminAttemptsPage(tab) {
             )
             .join("");
 
-          const safeUserName = escapeHtml(a.user_name).replace(/'/g, "\\'");
-
           return `
-          <tr onclick="toggleRow(${a.id})" style="cursor:pointer;">
+          <tr class="a-row-toggle" data-id="${a.id}" style="cursor:pointer;">
             <td><b>${escapeHtml(a.user_name)}</b></td>
             <td>${escapeHtml(a.user_church)}</td>
             <td><a href="tel:${escapeHtml(a.user_phone)}" onclick="event.stopPropagation();" style="color:inherit;text-decoration:none;">${escapeHtml(a.user_phone)}</a></td>
@@ -168,7 +166,7 @@ export async function renderAdminAttemptsPage(tab) {
             <td class="pct-pill" style="color:${scoreColor(a.percentage)}; font-weight: bold;">${Number(a.percentage).toFixed(1)}%</td>
             <td>${escapeHtml(a.grade_text || "-")}</td>
             <td style="text-align:center;">
-              <button type="button" class="a-delete-btn" title="حذف الطالب نهائياً" onclick="handleDeleteAttempt(event, ${a.id}, '${safeUserName}')">
+              <button type="button" class="a-delete-btn" title="حذف الطالب نهائياً" data-id="${a.id}" data-name="${escapeHtml(a.user_name)}">
                 <i class="fa-solid fa-trash-can"></i>
               </button>
             </td>
@@ -256,7 +254,6 @@ export async function renderAdminAttemptsPage(tab) {
         font-size: 0.85rem;
       }
 
-      /* لوحة حذف الأنشطة والرياضات الجماعية */
       .a-bulk-delete-box {
         background: var(--a-bg-card, #1e293b);
         border: 1px solid #ef444440;
@@ -418,7 +415,7 @@ export async function renderAdminAttemptsPage(tab) {
           </select>
         </div>
 
-        <button type="button" class="a-bulk-del-action-btn" onclick="handleBulkDeletePackage()">
+        <button type="button" class="a-bulk-del-action-btn" id="bulkDeleteBtn">
           <i class="fa-solid fa-trash-can"></i> مسح النشاط
         </button>
       </div>
@@ -448,26 +445,36 @@ export async function renderAdminAttemptsPage(tab) {
     }
   `;
 
-  window.toggleRow = (id) =>
-    document.getElementById(`detail_${id}`).classList.toggle("open");
+  // ربط أحداث فتح التفاصيل والحذف بأسلوب الآمان Safe Event Listeners
+  document.querySelectorAll(".a-row-toggle").forEach((tr) => {
+    tr.addEventListener("click", () => {
+      const id = tr.dataset.id;
+      document.getElementById(`detail_${id}`)?.classList.toggle("open");
+    });
+  });
 
-  window.handleDeleteAttempt = async (e, id, name) => {
-    e.stopPropagation();
-    const confirmed = confirm(`هل أنت متأكد من حذف الطالب (${name}) نهائياً من قاعدة البيانات؟`);
-    if (!confirmed) return;
+  document.querySelectorAll(".a-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
 
-    try {
-      await deleteAttempt(id);
-      alert("تم حذف الطالب بنجاح");
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-      alert("حدث خطأ أثناء الحذف: " + (err.message || "يرجى التأكد من تشغيل أمر SQL الخاص بـ Policy الحذف"));
-    }
-  };
+      const confirmed = confirm(`هل أنت متأكد من حذف الطالب (${name}) نهائياً من قاعدة البيانات؟`);
+      if (!confirmed) return;
 
-  // دالة الحذف الجماعي للنشاط/الرياضة
-  window.handleBulkDeletePackage = async () => {
+      try {
+        await deleteAttempt(id);
+        alert("تم حذف الطالب بنجاح");
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        alert("حدث خطأ أثناء الحذف: " + (err.message || "يرجى التأكد من تشغيل أمر SQL الخاص بـ Policy الحذف"));
+      }
+    });
+  });
+
+  // الحذف الجماعي للنشاط/الرياضة
+  document.getElementById("bulkDeleteBtn")?.addEventListener("click", async () => {
     const examId = document.getElementById("bulk_del_exam").value;
     const churchName = document.getElementById("bulk_del_church").value;
     const rawItem = document.getElementById("bulk_del_item").value;
@@ -487,10 +494,7 @@ export async function renderAdminAttemptsPage(tab) {
       [category, item] = rawItem.split("|||");
     }
 
-    const churchText =
-      !churchName || churchName === "ALL"
-        ? "جميع الكنائس"
-        : `كنيسة (${churchName})`;
+    const churchText = !churchName || churchName === "ALL" ? "جميع الكنائس" : `كنيسة (${churchName})`;
 
     const confirmed = confirm(
       `هل أنت متأكد من حذف (${item}) لجميع الطلاب في هذا الامتحان لـ ${churchText}؟\nسيتم مسحها نهائياً ولن تظهر في كشوفات النتائج ولا في الطباعة.`
@@ -502,27 +506,21 @@ export async function renderAdminAttemptsPage(tab) {
         category,
         item,
         examId,
-        churchName,
+        churchName === "ALL" ? "" : churchName,
       );
-      alert(
-        `تم حذف النشاط/الرياضة بنجاح!\nعدد الطلاب المحدثين: ${deletedCount}`
-      );
+      alert(`تم حذف النشاط/الرياضة بنجاح!\nعدد الطلاب المحدثين: ${deletedCount}`);
       window.location.reload();
     } catch (err) {
       console.error(err);
       alert("حدث خطأ أثناء الحذف: " + (err.message || "خطأ غير معروف"));
     }
-  };
+  });
 
   const themeToggle = document.getElementById("themeToggle");
   const htmlEl = document.documentElement;
-  htmlEl.setAttribute(
-    "data-theme",
-    localStorage.getItem("admin_theme") || "dark",
-  );
-  themeToggle.addEventListener("click", () => {
-    const next =
-      htmlEl.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  htmlEl.setAttribute("data-theme", localStorage.getItem("admin_theme") || "dark");
+  themeToggle?.addEventListener("click", () => {
+    const next = htmlEl.getAttribute("data-theme") === "dark" ? "light" : "dark";
     htmlEl.setAttribute("data-theme", next);
     localStorage.setItem("admin_theme", next);
   });
