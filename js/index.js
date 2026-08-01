@@ -1,9 +1,19 @@
-import { getAllExams, updateExamStatus } from "../includes/functions.js";
+// إضافة رقم الإصدار للاستدعاء لمنع كاش الدوال المساعدة
+import { getAllExams, updateExamStatus } from "../includes/functions.js?v=1.0.1";
 
 function escapeHtml(str) {
   const d = document.createElement("div");
   d.textContent = str ?? "";
   return d.innerHTML;
+}
+
+// دالة مرنة للتحقق من حالة فتح الامتحان بغض النظر عن نوع البيانات القادمة من قاعدة البيانات
+function checkIsOpen(status) {
+  if (status === null || status === undefined) return true;
+  if (typeof status === "boolean") return status;
+  if (typeof status === "number") return status === 1;
+  if (typeof status === "string") return status.toLowerCase() === "true" || status === "1";
+  return Boolean(status);
 }
 
 async function renderExams() {
@@ -24,11 +34,12 @@ async function renderExams() {
     grid.innerHTML = exams
       .map((exam) => {
         const examSlug = exam.slug || exam.id;
-        const isOpen = exam.is_open !== false; // مفتوح بشكل افتراضي
+        const isOpen = checkIsOpen(exam.is_open);
+        
         const currentOrigin = window.location.origin;
         const currentPath = window.location.pathname.substring(
           0,
-          window.location.pathname.lastIndexOf("/") + 1,
+          window.location.pathname.lastIndexOf("/") + 1
         );
         const examUrl = `${currentOrigin}${currentPath}exam.html?slug=${encodeURIComponent(examSlug)}`;
 
@@ -67,7 +78,6 @@ async function renderExams() {
       })
       .join("");
 
-    // معالجة الضغط على زر قفل/فتح الامتحان
     document.querySelectorAll(".toggle-status-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const targetBtn = e.currentTarget;
@@ -89,7 +99,6 @@ async function renderExams() {
       });
     });
 
-    // معالجة الضغط على زر النسخ
     document.querySelectorAll(".copy-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const targetBtn = e.currentTarget;
