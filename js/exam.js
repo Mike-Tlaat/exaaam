@@ -1,6 +1,6 @@
 // js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
 
-import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, PACKAGE_CATEGORIES } from "../includes/config.js?v=5.0.0";
+import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, PACKAGE_CATEGORIES } from "../includes/config.js?v=2.0.1";
 import {
   getExamBySlug,
   getExamById,
@@ -12,12 +12,12 @@ import {
   savePackageSelections,
   loadQuestions,
   submitExamAttempt,
-} from "../includes/functions.js?v=2.0.0";
+} from "../includes/functions.js?v=2.0.1";
 
 // =======================================
 // آلية التحديث التلقائي للنسخة (Cache Control)
 // =======================================
-const CURRENT_APP_VERSION = "2.0.0";
+const CURRENT_APP_VERSION = "2.0.1";
 (function checkAppVersion() {
   const savedVersion = localStorage.getItem("app_sys_version");
   if (savedVersion !== CURRENT_APP_VERSION) {
@@ -498,9 +498,6 @@ function persistAndEvaluate() {
   evaluateProgress();
 }
 
-/**
- * دالة التحقق الدقيقة للإجابة عن السؤال متضمنة أسئلة الفراغات
- */
 function isQuestionAnswered(questionObj, value) {
   if (!questionObj) return false;
   const type = questionObj.type;
@@ -533,32 +530,43 @@ function evaluateProgress() {
   if (text) text.textContent = `تم حل ${answeredCount} من أصل ${total} أسئلة`;
 }
 
+/**
+ * دالة تحويل التواريخ بشكل آمن وضمان توحيد المناطق الزمنية (UTC)
+ */
 function safeParseDate(dateStr) {
   if (!dateStr) return null;
   if (typeof dateStr === "number") return dateStr;
 
   let s = String(dateStr).trim().replace(" ", "T");
+  // إذا لم يكن التاريخ يحتوي على تحديد للـ TimeZone يتم إضافة 'Z' لضمان المعالجة كـ UTC
+  if (!s.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(s)) {
+    s += "Z";
+  }
   const time = new Date(s).getTime();
   return isNaN(time) ? null : time;
 }
 
 function startTimer() {
-  const durationSec = Number(EXAM_DURATION_SECONDS) || 1800;
+  const durationSec = Number(EXAM_DURATION_SECONDS) || 1800; // 30 دقيقة افتراضياً
   const localTimerKey = `timer_start_ms_${attemptId}`;
 
   let savedLocalMs = localStorage.getItem(localTimerKey);
   savedLocalMs = savedLocalMs ? Number(savedLocalMs) : null;
 
-  const dbStartMs = safeParseDate(currentAttempt?.exam_started_at || currentAttempt?.start_time || currentAttempt?.created_at);
+  // جلب وقت البداية الحقيقي من الامتحان فقط (exam_started_at)
+  const dbStartMs = safeParseDate(currentAttempt?.exam_started_at || currentAttempt?.start_time);
 
-  if (savedLocalMs && !isNaN(savedLocalMs) && savedLocalMs > 0) {
+  const nowMs = Date.now();
+
+  // التحقق من صلاحية التاريخ المخزن محلياً أو القادم من قاعدة البيانات
+  if (savedLocalMs && !isNaN(savedLocalMs) && savedLocalMs > 0 && (nowMs - savedLocalMs) < (durationSec * 1000)) {
     examStartedAtMs = savedLocalMs;
-  } else if (dbStartMs) {
+  } else if (dbStartMs && (nowMs - dbStartMs) < (durationSec * 1000) && (nowMs - dbStartMs) >= 0) {
     examStartedAtMs = dbStartMs;
     localStorage.setItem(localTimerKey, String(dbStartMs));
   } else {
-    examStartedAtMs = Date.now();
-    localStorage.setItem(localTimerKey, String(examStartedAtMs));
+    examStartedAtMs = nowMs;
+    localStorage.setItem(localTimerKey, String(nowMs));
   }
 
   const timerEl = document.getElementById("timer");
