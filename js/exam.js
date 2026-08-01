@@ -1,6 +1,6 @@
 // js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
 
-import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM, PACKAGE_CATEGORIES } from "../includes/config.js?v=2.0.0";
+import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, PACKAGE_CATEGORIES } from "../includes/config.js?v=2.0.0";
 import {
   getExamBySlug,
   getExamById,
@@ -233,7 +233,7 @@ async function showPackages() {
   const packages = await loadPackages();
   const container = document.getElementById("packagesContainer");
 
-  const activityItems = (packages["أنشطة"] || []).filter((v) => v !== SPORTS_TOGGLE_ITEM);
+  const activityItems = packages["أنشطة"] || [];
   const individualItems = packages["اللعب الفردي"] || [];
 
   container.innerHTML = `
@@ -248,14 +248,10 @@ async function showPackages() {
             ? activityItems.map((item) => optionHtml("أنشطة", item)).join("")
             : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً في هذا القسم.</div>`
         }
-        <label class="pkg-option sports-toggle">
-          <input type="checkbox" id="sportsToggle">
-          <span><i class="fa-solid fa-futbol"></i> مسابقات رياضية (لا تُحسب من ضمن الـ ${MAX_ACTIVITIES} أعلاه - فقط لتفعيل التسجيل في اللعب الفردي بالأسفل)</span>
-        </label>
       </div>
     </div>
 
-    <div class="pkg-card hidden" id="individualCard" data-category="اللعب الفردي">
+    <div class="pkg-card" id="individualCard" data-category="اللعب الفردي">
       <div class="pkg-card-title">
         <h3>اللعب الفردي</h3>
         <span class="limit-badge">اختر 3 ألعاب كحد أقصى</span>
@@ -272,24 +268,11 @@ async function showPackages() {
 
   const activitiesCard = container.querySelector('.pkg-card[data-category="أنشطة"]');
   const individualCard = document.getElementById("individualCard");
-  const sportsToggle = document.getElementById("sportsToggle");
-
-  function updateSportsVisibility() {
-    const enabled = sportsToggle.checked;
-    individualCard.classList.toggle("hidden", !enabled);
-    if (!enabled) {
-      individualCard.querySelectorAll("input").forEach((i) => {
-        i.checked = false;
-        i.closest(".pkg-option")?.classList.remove("selected-active");
-      });
-    }
-  }
-  sportsToggle.addEventListener("change", updateSportsVisibility);
 
   // التحكم في الحد الأقصى للأنشطة
-  activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle)').forEach((input) => {
+  activitiesCard.querySelectorAll('input[type="checkbox"]').forEach((input) => {
     input.addEventListener("change", (e) => {
-      const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle):checked').length;
+      const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:checked').length;
       if (checkedCount > MAX_ACTIVITIES) {
         e.target.checked = false;
         e.target.closest(".pkg-option")?.classList.remove("selected-active");
@@ -301,9 +284,9 @@ async function showPackages() {
   });
 
   // التحكم في الحد الأقصى للعب الفردي (3 اختيارات كحد أقصى)
-  individualCard.querySelectorAll("input").forEach((input) => {
+  individualCard.querySelectorAll('input[type="checkbox"]').forEach((input) => {
     input.addEventListener("change", (e) => {
-      const checkedInCard = individualCard.querySelectorAll("input:checked");
+      const checkedInCard = individualCard.querySelectorAll('input[type="checkbox"]:checked');
       if (checkedInCard.length > 3) {
         e.target.checked = false;
         e.target.closest(".pkg-option")?.classList.remove("selected-active");
@@ -333,8 +316,7 @@ async function showPackages() {
       cancelText: "تعديل الاختيار",
       onCancel: () => {},
       onConfirm: async () => {
-        const sportsEnabled = sportsToggle.checked;
-        await savePackageSelections(currentAttempt.id, selections, sportsEnabled);
+        await savePackageSelections(currentAttempt.id, selections, true);
         await ensureExamStarted(currentAttempt.id);
         currentAttempt = await getAttempt(currentAttempt.id);
         startExam();
