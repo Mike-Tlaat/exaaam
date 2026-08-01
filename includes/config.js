@@ -1,8 +1,6 @@
 // config.js
-// إعدادات المشروع العامة. لازم تحط هنا بيانات مشروعك على Supabase.
+// إعدادات المشروع العامة.
 
-// ⚠️ هام جداً: غيّر القيمتين دول ببيانات مشروعك في Supabase
-// (Project Settings -> API -> Project URL / anon public key)
 export const SUPABASE_URL = "https://jbbdaeuywgxntgjlgdwr.supabase.co";
 export const SUPABASE_ANON_KEY =
   "sb_publishable_KNrpDMOEF_fxYGahLWwahw_KSVxaSf6";
@@ -10,23 +8,22 @@ export const SUPABASE_ANON_KEY =
 // مدة الامتحان بالثواني (30 دقيقة)
 export const EXAM_DURATION_SECONDS = 30 * 60;
 
-// مسار فولدر الأسئلة (مسار نسبي بدون / في البداية لتجنب خطأ 404)
+// مسار فولدر الأسئلة
 export const QUESTIONS_PATH = "questions/";
 
-// اسم فولدر الإدارة (بدون أي باسورد)
+// اسم فولدر الإدارة
 export const ADMIN_FOLDER = "admin21-samanoud";
 
-// حد أقصى اختيار الأنشطة (بدون احتساب "مسابقات رياضية" ضمنه)
+// حد أقصى اختيار الأنشطة
 export const MAX_ACTIVITIES = 3;
 
-// اسم خيار المسابقات الرياضية الخاص (مجرد خانة تفعّل قسم الألعاب، لا تُحسب من ضمن الـ 3 أنشطة)
+// اسم خيار المسابقات الرياضية
 export const SPORTS_TOGGLE_ITEM = "مسابقات رياضية";
 
-// الحد الأقصى لكل بكدج (الفردي / الجماعي كل واحد بحد أقصى اختيار واحد)
+// الحد الأقصى لكل قسم (تم تعديل اللعب الفردي إلى 3 وإزالة الجماعي)
 export const PACKAGE_CATEGORIES = {
   أنشطة: MAX_ACTIVITIES,
-  "اللعب الفردي": 1,
-  "اللعب الجماعي": 1,
+  "اللعب الفردي": 3,
 };
 
 // قائمة الكنائس المعتمدة
