@@ -383,7 +383,7 @@ export async function getAttemptsByPassFail(
 }
 
 /* =======================================
-   نظام اختيار الأنشطة (مع إزالة التكرار)
+   نظام اختيار الأنشطة
 ======================================= */
 export function getPackageCategories() {
   return PACKAGE_CATEGORIES;
@@ -416,8 +416,7 @@ export async function loadPackages() {
 
 export async function savePackageSelections(
   attemptId,
-  selections,
-  sportsEnabled,
+  selections
 ) {
   const categories = getPackageCategories();
   const available = await loadPackages();
@@ -438,13 +437,9 @@ export async function savePackageSelections(
       ),
     ];
 
-    if (category === "أنشطة") {
-      const withoutSports = chosen.filter((v) => v !== SPORTS_TOGGLE_ITEM);
-      chosen = withoutSports.slice(0, categories[category]);
-      if (sportsEnabled) chosen.push(SPORTS_TOGGLE_ITEM);
-    } else {
-      chosen = sportsEnabled ? chosen.slice(0, categories[category]) : [];
-    }
+    // قص الاختيارات حسب الحد المسموح المعرف في config.js لكل قسم
+    const maxLimit = categories[category] || 3;
+    chosen = chosen.slice(0, maxLimit);
 
     chosen.forEach((item) =>
       rowsToInsert.push({ attempt_id: attemptId, category, item }),
@@ -601,7 +596,6 @@ export async function deletePackageSelectionsByFilter(
     throw new Error("يرجى تحديد النشاط أو الرياضة المراد حذفها");
   }
 
-  // 1. جلب المحاولات المطابقة لشرط الامتحان والكنيسة
   let query = supabase.from("attempts").select("id");
 
   if (examId) {
@@ -621,7 +615,6 @@ export async function deletePackageSelectionsByFilter(
 
   const attemptIds = attempts.map((a) => a.id);
 
-  // 2. حذف السجلات المطابقة من جدول attempt_packages
   const CHUNK_SIZE = 200;
   let totalDeleted = 0;
 
