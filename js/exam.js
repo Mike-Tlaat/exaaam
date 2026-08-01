@@ -22,7 +22,6 @@ const CURRENT_APP_VERSION = "2.0.0";
   const savedVersion = localStorage.getItem("app_sys_version");
   if (savedVersion !== CURRENT_APP_VERSION) {
     localStorage.setItem("app_sys_version", CURRENT_APP_VERSION);
-    // إجبار المتصفح على إعادة تحميل الملفات الحديثة من السيرفر فوراً
     if (savedVersion) {
       window.location.reload(true);
     }
@@ -54,7 +53,7 @@ const attemptStorageKey = (examId) => `attempt_id_${examId}`;
 
 let currentExam = null;
 let currentAttempt = null;
-let isSubmittingLock = false; // قفل يمنع الضغط المتعدد من نفس الجهاز
+let isSubmittingLock = false;
 
 /* =======================================
    المودال المشترك
@@ -182,7 +181,10 @@ function showRegistration() {
   const errorBox = document.getElementById("registrationError");
   const errorText = document.getElementById("registrationErrorText");
 
-  form?.addEventListener("submit", async (e) => {
+  if (!form || form.dataset.bound) return;
+  form.dataset.bound = "true";
+
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorBox.classList.add("hidden");
 
@@ -269,7 +271,6 @@ async function showPackages() {
   const activitiesCard = container.querySelector('.pkg-card[data-category="أنشطة"]');
   const individualCard = document.getElementById("individualCard");
 
-  // التحكم في الحد الأقصى للأنشطة
   activitiesCard.querySelectorAll('input[type="checkbox"]').forEach((input) => {
     input.addEventListener("change", (e) => {
       const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:checked').length;
@@ -283,7 +284,6 @@ async function showPackages() {
     });
   });
 
-  // التحكم في الحد الأقصى للعب الفردي (3 اختيارات كحد أقصى)
   individualCard.querySelectorAll('input[type="checkbox"]').forEach((input) => {
     input.addEventListener("change", (e) => {
       const checkedInCard = individualCard.querySelectorAll('input[type="checkbox"]:checked');
@@ -302,27 +302,33 @@ async function showPackages() {
     });
   });
 
-  document.getElementById("reviewPackagesBtn")?.addEventListener("click", () => {
-    const selections = collectSelections(container);
-    const summaryHtml = Object.entries(selections)
-      .map(([cat, items]) => `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(cat)}:</strong> ${items.length ? items.map(escapeHtml).join("، ") : "لم يتم الاختيار"}</div>`)
-      .join("");
+  const reviewBtn = document.getElementById("reviewPackagesBtn");
+  if (reviewBtn) {
+    const newReviewBtn = reviewBtn.cloneNode(true);
+    reviewBtn.parentNode.replaceChild(newReviewBtn, reviewBtn);
 
-    showModal({
-      type: "success",
-      title: "تأكيد الاختيار",
-      summaryHtml,
-      confirmText: "تأكيد والدخول للامتحان",
-      cancelText: "تعديل الاختيار",
-      onCancel: () => {},
-      onConfirm: async () => {
-        await savePackageSelections(currentAttempt.id, selections, true);
-        await ensureExamStarted(currentAttempt.id);
-        currentAttempt = await getAttempt(currentAttempt.id);
-        startExam();
-      },
+    newReviewBtn.addEventListener("click", () => {
+      const selections = collectSelections(container);
+      const summaryHtml = Object.entries(selections)
+        .map(([cat, items]) => `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(cat)}:</strong> ${items.length ? items.map(escapeHtml).join("، ") : "لم يتم الاختيار"}</div>`)
+        .join("");
+
+      showModal({
+        type: "success",
+        title: "تأكيد الاختيار",
+        summaryHtml,
+        confirmText: "تأكيد والدخول للامتحان",
+        cancelText: "تعديل الاختيار",
+        onCancel: () => {},
+        onConfirm: async () => {
+          await savePackageSelections(currentAttempt.id, selections, true);
+          await ensureExamStarted(currentAttempt.id);
+          currentAttempt = await getAttempt(currentAttempt.id);
+          startExam();
+        },
+      });
     });
-  });
+  }
 }
 
 function optionHtml(category, item) {
@@ -367,10 +373,8 @@ async function startExam() {
 
   questions = (await loadQuestions(currentExam.json_file)) || [];
 
-  // تعبئة عنوان الامتحان
   document.getElementById("examTitle").textContent = currentExam.name;
 
-  // عرض صفة الامتحان بخط ثانوي
   const stageEl = document.getElementById("examStage");
   if (stageEl) {
     const stageVal = currentExam.stage || currentExam.category || "";
@@ -390,7 +394,12 @@ async function startExam() {
   evaluateProgress();
   startTimer();
 
-  document.getElementById("submitExamBtn")?.addEventListener("click", () => validateAndSubmit(false));
+  const submitBtn = document.getElementById("submitExamBtn");
+  if (submitBtn) {
+    const newSubmitBtn = submitBtn.cloneNode(true);
+    submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
+    newSubmitBtn.addEventListener("click", () => validateAndSubmit(false));
+  }
 }
 
 function renderQuestions() {
@@ -469,7 +478,7 @@ function renderQuestions() {
     input.addEventListener("input", () => {
       const index = input.dataset.index;
       const blank = Number(input.dataset.blank);
-      const arr = Array.isArray(answers[index]) ? answers[index] : [];
+      const arr = Array.isArray(answers[index]) ? [...answers[index]] : [];
       arr[blank] = input.value;
       answers[index] = arr;
       persistAndEvaluate();
@@ -489,18 +498,32 @@ function persistAndEvaluate() {
   evaluateProgress();
 }
 
-function isQuestionAnswered(type, value) {
+/**
+ * دالة التحقق الدقيقة للإجابة عن السؤال متضمنة أسئلة الفراغات
+ */
+function isQuestionAnswered(questionObj, value) {
+  if (!questionObj) return false;
+  const type = questionObj.type;
+
   if (type === "fill_in_the_blank") {
-    if (!Array.isArray(value) || value.length === 0) return false;
-    return value.every((v) => String(v ?? "").trim() !== "");
+    const segments = String(questionObj.question).split(/\.{3,}/u);
+    const expectedBlanks = Math.max(segments.length - 1, 1);
+    
+    if (!Array.isArray(value) || value.length < expectedBlanks) return false;
+    
+    for (let i = 0; i < expectedBlanks; i++) {
+      if (String(value[i] ?? "").trim() === "") return false;
+    }
+    return true;
   }
+  
   return value !== undefined && !Array.isArray(value) && String(value ?? "").trim() !== "";
 }
 
 function evaluateProgress() {
   let answeredCount = 0;
   questions.forEach((q, index) => {
-    if (isQuestionAnswered(q.type, answers[index])) answeredCount++;
+    if (isQuestionAnswered(q, answers[index])) answeredCount++;
   });
   const total = questions.length;
   const pct = total > 0 ? (answeredCount / total) * 100 : 0;
@@ -510,25 +533,15 @@ function evaluateProgress() {
   if (text) text.textContent = `تم حل ${answeredCount} من أصل ${total} أسئلة`;
 }
 
-/* =======================================
-   دالة تحليل التواريخ بأمان مع معالجة UTC
-======================================= */
 function safeParseDate(dateStr) {
   if (!dateStr) return null;
   if (typeof dateStr === "number") return dateStr;
 
   let s = String(dateStr).trim().replace(" ", "T");
-  if (!s.includes("Z") && !s.includes("+") && !s.match(/-\d{2}:\d{2}$/)) {
-    s += "Z";
-  }
-
   const time = new Date(s).getTime();
   return isNaN(time) ? null : time;
 }
 
-/* =======================================
-   المؤقت
-======================================= */
 function startTimer() {
   const durationSec = Number(EXAM_DURATION_SECONDS) || 1800;
   const localTimerKey = `timer_start_ms_${attemptId}`;
@@ -575,11 +588,8 @@ function startTimer() {
   tick();
 }
 
-/* =======================================
-   التسليم ونظام الطابور التتابعي (Queue Engine)
-======================================= */
 function validateAndSubmit(isTimeOut) {
-  if (isSubmittingLock) return; // منع الضغط المزدوج
+  if (isSubmittingLock) return;
 
   if (isTimeOut) {
     submitExam(true);
@@ -588,7 +598,7 @@ function validateAndSubmit(isTimeOut) {
 
   let firstUnanswered = null;
   questions.forEach((q, index) => {
-    if (firstUnanswered === null && !isQuestionAnswered(q.type, answers[index])) {
+    if (firstUnanswered === null && !isQuestionAnswered(q, answers[index])) {
       firstUnanswered = index;
     }
   });
@@ -602,7 +612,7 @@ function validateAndSubmit(isTimeOut) {
     showModal({
       type: "alert",
       title: "⚠️ أسئلة غير مكتملة",
-      text: "لا يمكنك تسليم الامتحان قبل الإجابة على جميع الأسئلة المطروحة. يرجى مراجعة السؤال المحدد.",
+      text: "لا يمكنك تسليم الامتحان قبل الإجابة على جميع الأسئلة المطروحة بشكل كامل. يرجى مراجعة السؤال المحدد.",
       confirmText: "حسناً، سأكمل الحل",
     });
     return;
@@ -646,22 +656,22 @@ async function submitExam(isTimeOut) {
   }
 
   const maxRetries = 5;
-  let attempt = 0;
+  let retryCount = 0;
   let success = false;
 
-  while (attempt < maxRetries && !success) {
+  while (retryCount < maxRetries && !success) {
     try {
       await submitExamAttempt(attemptId, questions, answers);
       success = true;
     } catch (err) {
-      attempt++;
-      console.warn(`⚠️ السيرفر مشغول، إعادة المحاولة (${attempt}/${maxRetries})...`, err);
+      retryCount++;
+      console.warn(`⚠️ السيرفر مشغول، إعادة المحاولة (${retryCount}/${maxRetries})...`, err);
 
-      if (attempt < maxRetries) {
+      if (retryCount < maxRetries) {
         if (submitBtn) {
-          submitBtn.textContent = `السيرفر مكتظ، جاري إرسال إجاباتك تلقائياً (محاولة ${attempt}/${maxRetries})...`;
+          submitBtn.textContent = `السيرفر مكتظ، جاري إرسال إجاباتك تلقائياً (محاولة ${retryCount}/${maxRetries})...`;
         }
-        const retryDelay = Math.pow(2, attempt) * 800 + Math.floor(Math.random() * 400);
+        const retryDelay = Math.pow(2, retryCount) * 800 + Math.floor(Math.random() * 400);
         await new Promise((res) => setTimeout(res, retryDelay));
       }
     }
