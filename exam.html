@@ -105,7 +105,11 @@
     <div class="sticky-dashboard">
       <div class="header-main-row">
         <div class="exam-info">
-          <h2 id="examTitle"></h2>
+          <!-- تم تعديل الهيدر لعرض اسم الامتحان وبجانبه صفة الامتحان بخط ثانوي -->
+          <div style="display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap;">
+            <h2 id="examTitle" style="margin: 0;"></h2>
+            <span id="examStage" style="font-size: 0.88rem; color: #94a3b8; font-weight: 600; opacity: 0.9;"></span>
+          </div>
           <div class="user-meta-tabs">
             <span class="meta-tag"><i class="fa-regular fa-user"></i> <span id="userNameTag"></span></span>
             <span class="meta-tag"><i class="fa-solid fa-mobile-screen-button"></i> <span id="userPhoneTag"></span></span>
