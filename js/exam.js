@@ -235,7 +235,6 @@ async function showPackages() {
 
   const activityItems = (packages["أنشطة"] || []).filter((v) => v !== SPORTS_TOGGLE_ITEM);
   const individualItems = packages["اللعب الفردي"] || [];
-  const teamItems = packages["اللعب الجماعي"] || [];
 
   container.innerHTML = `
     <div class="pkg-card" data-category="أنشطة">
@@ -251,7 +250,7 @@ async function showPackages() {
         }
         <label class="pkg-option sports-toggle">
           <input type="checkbox" id="sportsToggle">
-          <span><i class="fa-solid fa-futbol"></i> مسابقات رياضية (لا تُحسب من ضمن الـ ${MAX_ACTIVITIES} أعلاه - فقط لتفعيل التسجيل في الألعاب الفردية/الجماعية بالأسفل)</span>
+          <span><i class="fa-solid fa-futbol"></i> مسابقات رياضية (لا تُحسب من ضمن الـ ${MAX_ACTIVITIES} أعلاه - فقط لتفعيل التسجيل في اللعب الفردي بالأسفل)</span>
         </label>
       </div>
     </div>
@@ -259,7 +258,7 @@ async function showPackages() {
     <div class="pkg-card hidden" id="individualCard" data-category="اللعب الفردي">
       <div class="pkg-card-title">
         <h3>اللعب الفردي</h3>
-        <span class="limit-badge">اختر لعبة واحدة كحد أقصى</span>
+        <span class="limit-badge">اختر 3 ألعاب كحد أقصى</span>
       </div>
       <div class="pkg-options">
         ${
@@ -269,42 +268,25 @@ async function showPackages() {
         }
       </div>
     </div>
-
-    <div class="pkg-card hidden" id="teamCard" data-category="اللعب الجماعي">
-      <div class="pkg-card-title">
-        <h3>اللعب الجماعي</h3>
-        <span class="limit-badge">اختر لعبة واحدة كحد أقصى</span>
-      </div>
-      <div class="pkg-options">
-        ${
-          teamItems.length
-            ? teamItems.map((item) => optionHtml("اللعب الجماعي", item)).join("")
-            : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً في هذا القسم.</div>`
-        }
-      </div>
-    </div>
   `;
 
   const activitiesCard = container.querySelector('.pkg-card[data-category="أنشطة"]');
   const individualCard = document.getElementById("individualCard");
-  const teamCard = document.getElementById("teamCard");
   const sportsToggle = document.getElementById("sportsToggle");
 
   function updateSportsVisibility() {
     const enabled = sportsToggle.checked;
     individualCard.classList.toggle("hidden", !enabled);
-    teamCard.classList.toggle("hidden", !enabled);
     if (!enabled) {
-      [individualCard, teamCard].forEach((card) => {
-        card.querySelectorAll("input").forEach((i) => {
-          i.checked = false;
-          i.closest(".pkg-option")?.classList.remove("selected-active");
-        });
+      individualCard.querySelectorAll("input").forEach((i) => {
+        i.checked = false;
+        i.closest(".pkg-option")?.classList.remove("selected-active");
       });
     }
   }
   sportsToggle.addEventListener("change", updateSportsVisibility);
 
+  // التحكم في الحد الأقصى للأنشطة
   activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle)').forEach((input) => {
     input.addEventListener("change", (e) => {
       const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:not(#sportsToggle):checked').length;
@@ -318,20 +300,22 @@ async function showPackages() {
     });
   });
 
-  [individualCard, teamCard].forEach((card) => {
-    card.querySelectorAll("input").forEach((input) => {
-      input.addEventListener("change", (e) => {
-        const checkedInCard = card.querySelectorAll("input:checked");
-        if (checkedInCard.length > 1) {
-          checkedInCard.forEach((c) => {
-            if (c !== e.target) {
-              c.checked = false;
-              c.closest(".pkg-option")?.classList.remove("selected-active");
-            }
-          });
-        }
+  // التحكم في الحد الأقصى للعب الفردي (3 اختيارات كحد أقصى)
+  individualCard.querySelectorAll("input").forEach((input) => {
+    input.addEventListener("change", (e) => {
+      const checkedInCard = individualCard.querySelectorAll("input:checked");
+      if (checkedInCard.length > 3) {
+        e.target.checked = false;
+        e.target.closest(".pkg-option")?.classList.remove("selected-active");
+        showModal({
+          type: "alert",
+          title: "⚠️ الحد الأقصى للعب الفردي",
+          confirmText: "حسناً، فهمت",
+          text: "لا يمكنك اختيار أكثر من 3 ألعاب كحد أقصى في اللعب الفردي."
+        });
+      } else {
         e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
-      });
+      }
     });
   });
 
@@ -404,7 +388,7 @@ async function startExam() {
   // تعبئة عنوان الامتحان
   document.getElementById("examTitle").textContent = currentExam.name;
 
-  // عرض صفة الامتحان (خدام - إعداد خدام - جامعة - خريجين) بخط ثانوي
+  // عرض صفة الامتحان بخط ثانوي
   const stageEl = document.getElementById("examStage");
   if (stageEl) {
     const stageVal = currentExam.stage || currentExam.category || "";
