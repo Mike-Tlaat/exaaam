@@ -1,4 +1,48 @@
-import { getAllExams, updateExamStatus } from "../includes/functions.js?v=2.1.0";
+import { getAllExams, updateExamStatus } from "../includes/functions.js?v=2.2.0";
+
+// --- منطق حماية الصفحة بكلمة المرور ---
+function initPasswordProtection() {
+  const REQUIRED_PASS = "mike213510#";
+  const AUTH_KEY = "admin_authenticated";
+
+  const overlay = document.getElementById("authOverlay");
+  const input = document.getElementById("passInput");
+  const btn = document.getElementById("passSubmitBtn");
+  const errorMsg = document.getElementById("passError");
+
+  // إذا تم إدخال كلمة المرور سابقاً في نفس الجلسة، يتم إخفاء النافذة فوراً
+  if (sessionStorage.getItem(AUTH_KEY) === "true") {
+    if (overlay) overlay.style.display = "none";
+    return true;
+  }
+
+  function verify() {
+    if (input && input.value === REQUIRED_PASS) {
+      sessionStorage.setItem(AUTH_KEY, "true");
+      if (overlay) overlay.style.display = "none";
+      if (errorMsg) errorMsg.style.display = "none";
+    } else {
+      if (errorMsg) errorMsg.style.display = "block";
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+    }
+  }
+
+  if (btn) {
+    btn.addEventListener("click", verify);
+  }
+
+  if (input) {
+    input.focus();
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") verify();
+    });
+  }
+
+  return false;
+}
 
 function escapeHtml(str) {
   const d = document.createElement("div");
@@ -143,4 +187,7 @@ async function renderExams() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", renderExams);
+document.addEventListener("DOMContentLoaded", () => {
+  initPasswordProtection();
+  renderExams();
+});
