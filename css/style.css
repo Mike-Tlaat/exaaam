@@ -1,430 +1,323 @@
 /* ==========================================================
-   style.css - التصميم المتكامل الشامل لكافة صفحات النظام
+   style.css - إعادة هيكلة وتصميم نظام الامتحانات (النسخة الكاملة)
    ========================================================== */
 
+/* 1. إعداد المتغيرات الشاملة (Variables) */
 :root {
-  /* المتغيرات والألوان الأساسية */
-  --bg-main: #0b0f19;
+  --bg-dark: #0b0f19;
   --bg-gradient: radial-gradient(at 50% -20%, #1e293b 0%, #0f172a 45%, #0b0f19 100%);
-  --bg-card: rgba(17, 24, 39, 0.75);
-  --bg-card-border: rgba(255, 255, 255, 0.12);
+  --card-bg: rgba(17, 24, 39, 0.75);
+  --card-border: rgba(255, 255, 255, 0.12);
   
-  --primary-color: #6366f1;
+  --primary: #6366f1;
   --primary-hover: #4f46e5;
   --primary-glow: rgba(99, 102, 241, 0.35);
-  
-  --accent-gold: #f59e0b;
-  --accent-gold-glow: rgba(245, 158, 11, 0.25);
-  --success-color: #10b981;
+
+  --success: #10b981;
   --success-hover: #059669;
-  --success-glow: rgba(16, 185, 129, 0.25);
-  --danger-color: #f43f5e;
+  --danger: #f43f5e;
   --danger-hover: #e11d48;
-  --danger-glow: rgba(244, 63, 94, 0.25);
+  --warning: #f59e0b;
 
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
-  --text-light: #e5e7eb;
-
-  --radius-lg: 24px;
-  --radius-md: 16px;
-  --radius-sm: 10px;
-  --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* اختصارات وملاءمة الكلاسات القديمة */
-  --primary: var(--primary-color);
-  --primary-glow-subtle: rgba(99, 102, 241, 0.15);
-  --card-bg: var(--bg-card);
-  --card-border: var(--bg-card-border);
-  --border-glow: rgba(99, 102, 241, 0.35);
-  --success: var(--success-color);
-  --danger: var(--danger-color);
-  --warning: var(--accent-gold);
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ==========================================================
-   1. الإعدادات العامة وشريط التمرير (Global Resets)
-   ========================================================== */
+/* 2. إعادة ضبط العناصر الأساسية (Global Resets) */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #0f172a;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--primary-color);
-}
-
 body {
   font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-main);
+  background-color: var(--bg-dark);
   background-image: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
   direction: rtl;
-  position: relative;
-  overflow-x: hidden;
+  padding-bottom: 3rem;
 }
 
-a { color: inherit; text-decoration: none; }
-.hidden { display: none !important; }
-
-/* عناصر الإضاءة والمؤثرات خلف الصفحة */
-.bg-glow-orb {
-  position: absolute;
-  width: 350px;
-  height: 350px;
-  border-radius: 50%;
-  filter: blur(100px);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.45;
-  animation: pulseGlow 8s ease-in-out infinite alternate;
-}
-.orb-1 { top: -50px; right: -50px; background: rgba(99, 102, 241, 0.3); }
-.orb-2 { bottom: -50px; left: -50px; background: rgba(245, 158, 11, 0.2); }
-
-@keyframes pulseGlow {
-  0% { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(1.15) translate(20px, 20px); }
+/* إلغاء التنسيقات الافتراضية للمتصفح للأزرار والروابط */
+button, input[type="submit"], input[type="button"], a {
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+  border: none;
+  background: none;
+  text-decoration: none;
+  color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+/* 3. الهيدر العلوي وشريط التنقل (Navigation & Header) */
+header, nav, .idx-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(11, 15, 25, 0.85);
+  border-bottom: 1px solid var(--card-border);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
 }
 
-/* ==========================================================
-   2. الهيدر والصفحة الرئيسية (Index & Header Nav)
-   ========================================================== */
-.idx-nav {
-  position: sticky; top: 0; z-index: 50;
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  background: rgba(11, 15, 25, 0.85); border-bottom: 1px solid var(--bg-card-border);
-  padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;
-}
-.idx-nav .brand-icon {
-  width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--primary-color);
-  display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #fff;
-  box-shadow: 0 0 15px var(--primary-glow);
-}
-.idx-nav h1, .idx-nav a {
-  font-size: 1.15rem; font-weight: 800; color: #fff;
-  display: flex; align-items: center; gap: 0.5rem;
+header a, nav a, .idx-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: var(--transition);
 }
 
-.idx-main { max-width: 1150px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; position: relative; z-index: 10; }
-.idx-header { text-align: center; max-width: 640px; margin: 0 auto 2.5rem; }
-.idx-header h2 { font-size: 1.9rem; font-weight: 800; margin-bottom: 0.75rem; color: #fff; }
-.idx-header p { color: var(--text-muted); font-size: 1rem; line-height: 1.7; }
+header a:hover, nav a:hover {
+  color: var(--primary);
+}
 
-.idx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+/* 4. الحاوية الرئيسية وعناوين الصفحة */
+main, .idx-main, .container {
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
 
-/* ==========================================================
-   3. كروت الامتحانات والأزرار الداخليّة (Exam Cards & Action Buttons)
-   ========================================================== */
-.idx-card {
-  background: var(--bg-card);
-  border: 1px solid var(--bg-card-border);
+.page-header, .idx-header {
+  text-align: center;
+  max-width: 650px;
+  margin: 0 auto 2.5rem;
+}
+
+.page-header h1, .page-header h2, .idx-header h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.page-header p, .idx-header p {
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* 5. شبكة كروت الامتحانات (Grid System) */
+.grid, .idx-grid, .exams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+/* 6. تصميم كارت الامتحان (Exam Card Standard) */
+.card, .idx-card, div[class*="card"] {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
-  padding: 1.75rem 1.5rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 1.25rem;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  gap: 1rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   transition: var(--transition);
-  box-shadow: var(--shadow);
-  animation: fadeInUp 0.4s ease;
   position: relative;
 }
-.idx-card:hover {
-  transform: translateY(-6px);
+
+.card:hover, .idx-card:hover {
+  transform: translateY(-5px);
   border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 15px 30px rgba(0,0,0,0.4), 0 0 20px var(--primary-glow);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 20px var(--primary-glow);
 }
 
-.idx-card .icon-box {
-  width: 48px; height: 48px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); color: var(--primary-color);
-  display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin-bottom: 0.5rem;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+/* نصوص وعناوين الكارت */
+.card h3, .idx-card h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 0.4rem;
 }
 
-.idx-card h3 { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 0.3rem; }
-.idx-card p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; }
+.card p, .idx-card p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
 
-/* تنسيق وتوزيع كتل الأزرار والـ Forms داخل الكارت */
+/* 7. تجميع الأزرار داخل الكارت وتنسيقها الحرج */
+.card form,
 .idx-card form,
-.idx-card .card-actions,
-.idx-card .btn-group,
-.idx-card > div:last-child {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  justify-content: flex-start;
-  width: 100%;
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+.card-actions,
+.idx-card div:last-child {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.5rem !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  margin-top: auto !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-/* إلغاء التنسيق الافتراضي للـ Form لضمان عدم تخريب التنسيق */
-.idx-card form {
-  border-top: none;
-  padding-top: 0;
-  margin-top: 0;
-  display: inline-flex;
-}
-
-/* التنسيق الزجاجي الشامل لكافة الأزرار والروابط داخل الكروت */
+/* التنسيق الشامل لكافة أنواع الأزرار داخل الكروت */
+.card button,
+.card a,
+.card input[type="submit"],
 .idx-card button,
 .idx-card a,
-.idx-card input[type="submit"],
-.idx-card .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.65rem 1rem;
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-  transition: var(--transition);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.7);
-  color: var(--text-main);
-  box-shadow: none;
-  white-space: nowrap;
+.idx-card input[type="submit"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem !important;
+  padding: 0.65rem 0.9rem !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: var(--transition) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(15, 23, 42, 0.7) !important;
+  color: var(--text-main) !important;
+  box-shadow: none !important;
+  white-space: nowrap !important;
 }
 
+/* تأثير التمرير للزر العادي */
+.card button:hover,
+.card a:hover,
+.card input[type="submit"]:hover,
 .idx-card button:hover,
 .idx-card a:hover,
 .idx-card input[type="submit"]:hover {
-  background: rgba(30, 41, 59, 0.9);
-  border-color: rgba(99, 102, 241, 0.4);
-  color: #fff;
-  transform: translateY(-2px);
+  background: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  color: #ffffff !important;
+  transform: translateY(-2px) !important;
 }
 
-/* تمييز زر "ابدأ الامتحان" كزر رئيسي بارز */
+/* الزر الرئيسي (ابدأ الامتحان) - يتم تطبيقه تلقائياً على أول زر أو الزر الرئيسي */
+.card button:first-child,
+.card a:first-child,
+.card input[type="submit"]:first-child,
 .idx-card button:first-child,
-.idx-card a.btn-primary,
-.idx-card button[name*="start"],
-.idx-card a[href*="exam"],
-.idx-card .btn-go {
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)) !important;
-  color: #fff !important;
+.idx-card a:first-child,
+.idx-card input[type="submit"]:first-child,
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover)) !important;
+  color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 4px 12px var(--primary-glow) !important;
-  flex: 1 1 auto;
+  box-shadow: 0 4px 14px var(--primary-glow) !important;
+  flex: 1 1 auto !important; /* يأخذ أكبر المساحة المتاحة */
 }
 
-.idx-card button:first-child:hover,
-.idx-card a.btn-primary:hover,
-.idx-card .btn-go:hover {
-  box-shadow: 0 6px 18px var(--primary-glow) !important;
+.card button:first-child:hover,
+.card a:first-child:hover,
+.card input[type="submit"]:first-child:hover,
+.btn-primary:hover {
+  box-shadow: 0 6px 20px var(--primary-glow) !important;
 }
 
-/* زر إغلاق الامتحان (خلفية حمراء) */
-.idx-card button:contains("إغلاق"),
-.idx-card button[name*="close"],
-.idx-card .btn-danger {
-  background: rgba(244, 63, 94, 0.15) !important;
-  border-color: rgba(244, 63, 94, 0.3) !important;
-  color: #fca5a5 !important;
-}
-.idx-card button:contains("إغلاق"):hover {
-  background: rgba(244, 63, 94, 0.25) !important;
+/* 8. نماذج إدخال البيانات والـ Forms العامة */
+.form-group {
+  margin-bottom: 1.25rem;
+  text-align: right;
 }
 
-/* زر فتح الامتحان (خلفية خضراء) */
-.idx-card button:contains("فتح"),
-.idx-card button[name*="open"],
-.idx-card .btn-success {
-  background: rgba(16, 185, 129, 0.15) !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
-  color: #6ee7b7 !important;
+label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  margin-bottom: 0.4rem;
 }
 
-/* ==========================================================
-   4. النماذج ومدخلات البيانات (Auth Forms & Controls)
-   ========================================================== */
-.auth-container, .pkg-container {
-  width: 100%; max-width: 680px; margin: 0 auto; padding: 2rem 1rem; position: relative; z-index: 10;
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: var(--transition);
 }
-.pkg-container { max-width: 850px; }
 
-.auth-card, .result-card {
-  background: var(--bg-card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--bg-card-border); border-radius: var(--radius-lg); padding: 2.25rem;
-  box-shadow: var(--shadow); animation: fadeInUp 0.5s ease; position: relative; overflow: hidden;
-}
-.auth-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-  background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  background: rgba(15, 23, 42, 0.85);
 }
 
-.auth-header { text-align: center; margin-bottom: 2rem; }
-.icon-header-badge {
-  width: 65px; height: 65px; background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
-  border-radius: 18px; display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 1rem; font-size: 1.8rem; color: #fff; box-shadow: 0 10px 25px var(--primary-glow);
+select option {
+  background-color: #0f172a;
+  color: #ffffff;
 }
-.auth-header h2 { font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 0.4rem; }
-.auth-header p { color: var(--text-muted); font-size: 0.92rem; }
 
-.form-group { margin-bottom: 1.25rem; text-align: right; }
-.label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
-label { display: flex; align-items: center; gap: 0.4rem; font-weight: 700; font-size: 0.92rem; color: var(--text-light); }
-
-.input-wrapper { position: relative; display: flex; align-items: center; }
-.input-wrapper input, .input-wrapper select, .input-wrapper textarea {
-  width: 100%; padding: 0.85rem 2.6rem 0.85rem 1rem; background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-md); color: #fff;
-  font-family: inherit; font-size: 0.95rem; outline: none; transition: var(--transition);
-}
-.input-wrapper input:focus, .input-wrapper select:focus, .input-wrapper textarea:focus {
-  border-color: var(--primary-color); box-shadow: 0 0 0 4px var(--primary-glow); background: rgba(15, 23, 42, 0.85);
-}
-select option { background-color: #0f172a !important; color: #f8fafc !important; }
-.input-wrapper i:not(.select-arrow) { position: absolute; right: 1rem; color: var(--text-muted); font-size: 1rem; pointer-events: none; }
-
-.btn-submit {
-  width: 100%; padding: 0.95rem; background: linear-gradient(135deg, var(--primary-color), #4f46e5);
-  border: none; border-radius: var(--radius-md); color: #fff; font-family: inherit; font-weight: 800;
-  font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-  box-shadow: 0 10px 20px var(--primary-glow); transition: var(--transition); margin-top: 1.25rem;
-}
-.btn-submit:hover { transform: translateY(-2px); box-shadow: 0 15px 25px var(--primary-glow); }
-
-/* ==========================================================
-   5. شاشة النتيجة والاستعلام (Results Lookup Page)
-   ========================================================== */
-body.results-page { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; min-height: 100vh; }
-.result-header { text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 1.5rem; }
-.result-icon { font-size: 3.2rem; margin-bottom: 0.5rem; }
-.result-icon.pass { color: var(--success-color); filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.4)); }
-.result-icon.fail { color: var(--danger-color); filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.4)); }
-
-.student-title { font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; }
-.status-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 1.1rem; border-radius: 30px; font-weight: 800; font-size: 0.9rem; }
-.status-pill.pass { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-.status-pill.fail { background: rgba(244, 63, 94, 0.15); color: #f87171; border: 1px solid rgba(244, 63, 94, 0.3); }
-
-.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
-.stat-box { background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
-.stat-box .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
-.stat-box .value { font-size: 1.1rem; font-weight: 800; color: #fff; }
-
-.activities-wrapper { background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 1.25rem; text-align: right; }
-.activities-title { font-size: 1rem; font-weight: 800; color: var(--text-light); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-.activity-chip { background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.25); color: #a5b4fc; padding: 0.35rem 0.8rem; border-radius: 20px; font-size: 0.82rem; font-weight: 700; display: inline-flex; margin: 0.2rem; }
-
-/* ==========================================================
-   6. شاشة الامتحان المباشر (Exam Interface)
-   ========================================================== */
-body.exam-page { padding-bottom: 6rem; }
-.sticky-dashboard {
-  position: sticky; top: 0; z-index: 1000;
-  background: rgba(11, 15, 25, 0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--bg-card-border); padding: 1rem 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-.header-main-row { max-width: 950px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.timer-badge { background: rgba(255,255,255,0.03); padding: 0.45rem 1.1rem; border-radius: 50px; font-size: 1.1rem; font-weight: 700; color: var(--primary-color); border: 1px solid rgba(255,255,255,0.1); }
-.timer-badge.critical { background: rgba(244, 63, 94, 0.1); color: var(--danger-color); border-color: rgba(244, 63, 94, 0.3); }
-
-.progress-container { max-width: 950px; margin: 0.6rem auto 0; display: flex; align-items: center; gap: 1rem; }
-.progress-bar-wrapper { flex-grow: 1; background: rgba(255,255,255,0.05); height: 8px; border-radius: 50px; overflow: hidden; border: 1px solid var(--bg-card-border); }
-.progress-bar-fill { background: linear-gradient(90deg, var(--primary-color), var(--success-color)); height: 100%; width: 0%; transition: width 0.4s ease; }
-
-.exam-container { max-width: 850px; margin: 2rem auto; padding: 0 1.25rem; position: relative; z-index: 10; }
-
+/* 9. شاشة الامتحان والأسئلة */
 .question-card {
-  background: var(--bg-card); border: 1px solid var(--bg-card-border); border-radius: var(--radius-lg);
-  padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(16px);
 }
-.question-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
-.question-number { font-weight: 800; color: #fff; background: var(--primary-color); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 0.9rem; }
-.question-text { font-size: 1.05rem; font-weight: 700; line-height: 1.7; margin-bottom: 1.25rem; color: #f1f5f9; text-align: right; }
 
-.options-list { display: flex; flex-direction: column; gap: 0.65rem; }
+.question-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.7;
+  margin-bottom: 1.25rem;
+}
+
 .option-item {
-  display: flex; align-items: center; padding: 0.85rem 1.1rem; background: rgba(15,23,42,0.6);
-  border: 1px solid var(--bg-card-border); border-radius: var(--radius-md); cursor: pointer; transition: var(--transition);
-}
-.option-item:hover { border-color: rgba(99, 102, 241, 0.4); background: rgba(30,41,59,0.8); }
-.option-item.selected-active { background: rgba(99, 102, 241, 0.15) !important; border-color: var(--primary-color) !important; box-shadow: 0 0 12px var(--primary-glow); }
-.option-item input { margin-left: 0.8rem; }
-
-.btn-finish { padding: 1rem 2.5rem; background: linear-gradient(135deg, var(--danger-color), var(--danger-hover)); color: #fff; border: none; border-radius: var(--radius-md); font-size: 1.05rem; font-weight: 800; cursor: pointer; transition: var(--transition); box-shadow: 0 8px 20px rgba(244,63,94,0.3); }
-.btn-finish:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(244,63,94,0.45); }
-
-/* ==========================================================
-   7. النوافذ المنبثقة (Custom Modals)
-   ========================================================== */
-.custom-modal-overlay {
-  position: fixed; inset: 0; background: rgba(5, 8, 15, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 9999;
-  opacity: 0; visibility: hidden; transition: all 0.3s ease;
-}
-.custom-modal-overlay.active { opacity: 1; visibility: visible; }
-
-.custom-modal-box {
-  background: #131b2e; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: var(--radius-lg);
-  padding: 2rem; max-width: 480px; width: 100%; text-align: center; position: relative;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8); transform: scale(0.92); transition: transform 0.3s ease;
-}
-.custom-modal-overlay.active .custom-modal-box { transform: scale(1); }
-
-.modal-icon-wrapper { width: 65px; height: 65px; border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; font-size: 2rem; }
-.modal-icon-wrapper.warning-badge, .modal-icon-wrapper.warning-type { background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); border: 2px solid rgba(245, 158, 11, 0.3); }
-.modal-icon-wrapper.success-type { background: rgba(16, 185, 129, 0.15); color: var(--success-color); border: 2px solid rgba(16, 185, 129, 0.3); }
-
-.modal-title { font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; }
-.modal-text-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.25rem; }
-
-/* ==========================================================
-   8. لوحة الإدارة (Admin Dashboard)
-   ========================================================== */
-body.admin-page {
-  --a-bg: #f6f8fc; --a-surface: #fff; --a-border: rgba(15,23,42,0.09); --a-text: #0f172a; --a-text-soft: #64748b;
-  --a-primary: #6366f1; --a-primary-soft: rgba(99,102,241,0.12); --a-success: #10b981; --a-danger: #f43f5e;
-  background: var(--a-bg); color: var(--a-text); background-image: none; direction: rtl;
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 1.1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+  transition: var(--transition);
 }
 
-.a-shell { max-width: 1200px; margin: 0 auto; padding: 20px 16px; }
-.a-topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.a-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px; }
-.a-stat-card { background: var(--a-surface); border: 1px solid var(--a-border); border-radius: 14px; padding: 12px 16px; }
+.option-item:hover {
+  border-color: var(--primary);
+  background: rgba(30, 41, 59, 0.8);
+}
 
-table.a-table { width: 100%; border-collapse: collapse; background: var(--a-surface); border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-table.a-table th, table.a-table td { padding: 12px; text-align: right; border-bottom: 1px solid var(--a-border); font-size: .85rem; }
-table.a-table th { color: var(--a-text-soft); background: var(--a-bg); font-weight: 700; }
-
-/* ==========================================================
-   9. التجاوب مع مختلف الشاشات (Responsive Breakpoints)
-   ========================================================== */
+/* 10. التجاوب مع الهواتف للشاشات الصغيرة */
 @media (max-width: 768px) {
-  .idx-grid { grid-template-columns: 1fr; }
-  .auth-card, .result-card { padding: 1.5rem 1.1rem; }
-  .stats-grid { grid-template-columns: 1fr; }
-  .idx-card button, .idx-card a { flex: 1 1 100%; } /* تجميع الأزرار ملء الشاشة على الهاتف */
+  .grid, .idx-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .card button, .card a, .idx-card button, .idx-card a {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
 }
