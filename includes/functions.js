@@ -389,37 +389,41 @@ export function getPackageCategories() {
   return PACKAGE_CATEGORIES;
 }
 
-export async function loadPackages() {
-  const categories = getPackageCategories();
-  const empty = {};
-  Object.keys(categories).forEach((c) => (empty[c] = []));
+export async function loadPackages(jsonFileName = "pk.json") {
+  const categories = {
+    "أنشطة": [],
+    "اللعب الفردي": [],
+    "اللعب الجماعي": [],
+  };
 
   try {
-    const path = getQuestionsPath() + "pk.json";
+    const path = getQuestionsPath() + jsonFileName;
     const res = await fetch(path, { cache: "no-store" });
-    if (!res.ok) return empty;
+    if (!res.ok) return categories;
     const data = await res.json();
-    const result = { ...empty };
-    Object.keys(categories).forEach((cat) => {
-      if (Array.isArray(data[cat])) {
-        const clean = data[cat]
-          .map((v) => String(v).trim())
-          .filter((v) => v !== "");
-        result[cat] = [...new Set(clean)];
-      }
-    });
-    return result;
+    return {
+      "أنشطة": Array.isArray(data["أنشطة"])
+        ? data["أنشطة"].map((v) => String(v).trim()).filter(Boolean)
+        : [],
+      "اللعب الفردي": Array.isArray(data["اللعب الفردي"])
+        ? data["اللعب الفردي"].map((v) => String(v).trim()).filter(Boolean)
+        : [],
+      "اللعب الجماعي": Array.isArray(data["اللعب الجماعي"])
+        ? data["اللعب الجماعي"].map((v) => String(v).trim()).filter(Boolean)
+        : [],
+    };
   } catch {
-    return empty;
+    return categories;
   }
 }
 
 export async function savePackageSelections(
   attemptId,
-  selections
+  selections,
+  jsonFileName = "pk.json"
 ) {
   const categories = getPackageCategories();
-  const available = await loadPackages();
+  const available = await loadPackages(jsonFileName);
 
   await supabase.from("attempt_packages").delete().eq("attempt_id", attemptId);
 
@@ -437,8 +441,7 @@ export async function savePackageSelections(
       ),
     ];
 
-    // قص الاختيارات حسب الحد المسموح المعرف في config.js لكل قسم
-    const maxLimit = categories[category] || 3;
+    const maxLimit = categories[category] || 4;
     chosen = chosen.slice(0, maxLimit);
 
     chosen.forEach((item) =>
