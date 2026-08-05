@@ -14,10 +14,12 @@
   --danger: #ef4444;
   --danger-glow: rgba(239, 68, 68, 0.2);
   --warning: #f59e0b;
+  --warning-glow: rgba(245, 158, 11, 0.25);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --radius-lg: 20px;
   --radius-md: 12px;
+  --radius-sm: 8px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -39,6 +41,27 @@ body {
   justify-content: flex-start;
   padding: 2rem 1rem;
   overflow-x: hidden;
+  position: relative;
+}
+
+/* ------------------ خلفيات جمالية متحركة ------------------ */
+.bg-glow-orb {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+  animation: pulseGlow 8s ease-in-out infinite alternate;
+}
+.orb-1 { top: -50px; right: -50px; background: rgba(59, 130, 246, 0.3); }
+.orb-2 { bottom: -50px; left: -50px; background: rgba(245, 158, 11, 0.2); }
+
+@keyframes pulseGlow {
+  0% { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.15) translate(20px, 20px); }
 }
 
 /* ------------------ أسلوب الحاويات الرئيسية ------------------ */
@@ -46,6 +69,8 @@ body {
   width: 100%;
   max-width: 680px;
   margin: auto;
+  position: relative;
+  z-index: 10;
 }
 
 .auth-card, .result-card {
@@ -57,6 +82,12 @@ body {
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(59, 130, 246, 0.05);
   transition: var(--transition);
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(15px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .auth-header {
@@ -286,6 +317,17 @@ body {
   padding: 1.1rem 0.8rem;
   border-radius: var(--radius-md);
   text-align: center;
+  transition: var(--transition);
+}
+
+.stat-box:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.stat-box.highlight-box {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.25);
 }
 
 .stat-box .label {
@@ -302,6 +344,7 @@ body {
   font-size: 1.15rem;
   font-weight: 800;
   color: #fff;
+  word-break: break-word;
 }
 
 .stat-box .value.primary-highlight {
@@ -631,25 +674,26 @@ body.index-page {
 .idx-empty i { font-size: 2.5rem; color: var(--primary); }
 .idx-empty.error i { color: var(--danger); }
 
-/* ------------------ نافذة طابور الانتظار ------------------ */
+/* ------------------ النوافذ المنبثقة (Modals & Queue) ------------------ */
 .custom-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.85);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 1.25rem;
   z-index: 9999;
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .custom-modal-overlay.active {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
 }
 
 .custom-modal-box {
@@ -657,25 +701,163 @@ body.index-page {
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   padding: 2.2rem 1.8rem;
-  max-width: 440px;
+  max-width: 500px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  position: relative;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+  transform: scale(0.92) translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.custom-modal-overlay.active .custom-modal-box {
+  transform: scale(1) translateY(0);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: var(--transition);
+}
+
+.modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
 }
 
 .modal-icon-wrapper {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+}
+
+.modal-icon-wrapper.warning-type {
   font-size: 2.8rem;
-  margin-bottom: 1rem;
   color: var(--warning);
 }
 
-.modal-text-desc {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  margin-top: 0.5rem;
+.modal-icon-wrapper.warning-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 30px var(--warning-glow);
 }
 
+.modal-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.6rem;
+}
+
+.modal-text-desc {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+/* كارت تفاصيل الإعادة المخصص */
+.re-exam-notice-box {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.05));
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  text-align: right;
+  margin-bottom: 1.5rem;
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--warning);
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px rgba(245, 158, 11, 0.2) solid;
+}
+
+.notice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.notice-item {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.notice-item i {
+  color: var(--warning);
+  font-size: 1.2rem;
+}
+
+.notice-item .info {
+  display: flex;
+  flex-direction: column;
+}
+
+.notice-item .lbl {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.notice-item .val {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.notice-footer-text {
+  font-size: 0.82rem;
+  color: #fde68a;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  line-height: 1.4;
+}
+
+.notice-footer-text i {
+  margin-top: 2px;
+}
+
+.btn-modal-close {
+  background: linear-gradient(135deg, var(--warning), #d97706);
+  box-shadow: 0 10px 20px var(--warning-glow);
+  margin-top: 0;
+}
+
+.btn-modal-close:hover {
+  box-shadow: 0 15px 25px var(--warning-glow);
+}
+
+/* طابور الانتظار */
 .queue-info-card {
   background: rgba(15, 23, 42, 0.7);
   padding: 1.2rem;
@@ -797,4 +979,6 @@ body.index-page {
   .brand-wrapper h1 { font-size: 1rem; }
   .dev-name-glow { font-size: 1.2rem; }
   .idx-grid { grid-template-columns: 1fr; }
+  .notice-grid { grid-template-columns: 1fr; }
+  .custom-modal-box { padding: 1.5rem 1.2rem; }
 }
