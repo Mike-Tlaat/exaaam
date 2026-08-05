@@ -3,89 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>الاستعلام عن نتيجة الامتحان</title>
+  <title>منصة الامتحانات - الاستعلام عن النتيجة</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Roboto:wght@500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="results-page">
 
-  <div class="auth-container" style="max-width: 650px;">
+  <div class="auth-container">
     <!-- كارت نموذج الاستعلام -->
     <div class="auth-card" id="searchCard">
       <div class="auth-header">
-        <div style="font-size: 2.5rem; color: var(--primary); margin-bottom: 0.5rem;">
+        <div class="icon-header-badge">
           <i class="fa-solid fa-graduation-cap"></i>
         </div>
         <h2>الاستعلام عن نتيجة الامتحان</h2>
-        <p>أدخل بياناتك للاستعلام عن الدرجة والأنشطة والألعاب المسجلة</p>
+        <p>أدخل بياناتك للاستعلام عن الدرجة والتفاصيل المسجلة</p>
       </div>
 
-      <form id="lookupForm">
+      <form id="lookupForm" novalidate>
         <div class="form-group">
           <label for="examSelect"><i class="fa-solid fa-book-open"></i> اختر الامتحان:</label>
           <div class="input-wrapper">
             <select id="examSelect" required>
               <option value="">-- جاري تحميل الامتحانات --</option>
             </select>
-            <i class="fa-solid fa-chevron-down"></i>
+            <i class="fa-solid fa-chevron-down select-arrow"></i>
           </div>
         </div>
 
         <div class="form-group">
-          <label for="phoneInput"><i class="fa-solid fa-phone"></i> رقم الهاتف (الرقم الذي امتحنت به):</label>
+          <div class="label-row">
+            <label for="phoneInput"><i class="fa-solid fa-mobile-screen-button"></i> رقم الهاتف (11 رقم):</label>
+            <span class="counter-badge" id="phoneCounter">0/11</span>
+          </div>
           <div class="input-wrapper">
-            <input type="tel" id="phoneInput" placeholder="أدخل رقم الهاتف..." required autocomplete="off">
-            <i class="fa-solid fa-mobile-screen-button"></i>
+            <input 
+              type="tel" 
+              id="phoneInput" 
+              placeholder="أدخل 11 رقم (مثال: 01012345678)" 
+              maxlength="11" 
+              minlength="11"
+              pattern="[0-9]{11}"
+              inputmode="numeric" 
+              autocomplete="off" 
+              required
+            >
+            <i class="fa-solid fa-phone"></i>
           </div>
         </div>
 
         <button type="submit" class="btn-submit" id="submitBtn">
-          <i class="fa-solid fa-magnifying-glass"></i> استعلام عن النتيجة
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span>استعلام عن النتيجة</span>
         </button>
       </form>
 
-      <div id="lookupError" class="error-alert hidden" style="margin-top: 1.25rem;"></div>
+      <div id="lookupError" class="error-alert hidden"></div>
     </div>
 
     <!-- كارت عرض النتيجة -->
-    <div class="result-card hidden" id="resultCard" style="max-width: 100%; text-align: right;">
-      <div style="text-align: center; margin-bottom: 1.5rem;">
+    <div class="result-card hidden" id="resultCard">
+      <div class="result-header">
         <div id="statusIcon" class="result-icon"></div>
-        <h2 id="resStudentName" style="font-size: 1.6rem; color: #fff;"></h2>
+        <h2 id="resStudentName" class="student-title"></h2>
         <div id="resPassPill" class="status-pill"></div>
       </div>
 
       <!-- شبكة البيانات الأساسية -->
-      <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+      <div class="stats-grid">
         <div class="stat-box">
           <div class="label"><i class="fa-solid fa-phone"></i> رقم الهاتف</div>
-          <div class="value" id="resPhone" style="font-size: 1.05rem;"></div>
+          <div class="value" id="resPhone"></div>
         </div>
         <div class="stat-box">
-          <div class="label"><i class="fa-solid fa-church"></i> الكنيسة</div>
-          <div class="value" id="resChurch" style="font-size: 0.95rem;"></div>
+          <div class="label"><i class="fa-solid fa-church"></i> الكنيسة / المنطقة</div>
+          <div class="value" id="resChurch"></div>
         </div>
         <div class="stat-box">
           <div class="label"><i class="fa-solid fa-award"></i> المجموع والدرجة</div>
-          <div class="value" id="resScore" style="color: var(--primary);"></div>
+          <div class="value primary-highlight" id="resScore"></div>
         </div>
         <div class="stat-box">
-          <div class="label"><i class="fa-solid fa-star"></i> التقدير</div>
+          <div class="label"><i class="fa-solid fa-star"></i> التقدير النهائي</div>
           <div class="value" id="resGrade"></div>
         </div>
       </div>
 
       <!-- الأنشطة والألعاب المشترك فيها -->
-      <div style="margin-top: 1.75rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 1.25rem; border-radius: 14px;">
-        <h3 style="font-size: 1.05rem; margin-bottom: 1rem; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-trophy" style="color: #f59e0b;"></i> الأنشطة والألعاب المشترك بها:
+      <div class="activities-wrapper">
+        <h3 class="activities-title">
+          <i class="fa-solid fa-trophy"></i> الأنشطة والألعاب المشترك بها:
         </h3>
-        <div id="activitiesContainer" style="display: flex; flex-direction: column; gap: 0.8rem;"></div>
+        <div id="activitiesContainer" class="activities-container"></div>
       </div>
 
-      <button type="button" class="btn-submit" id="backBtn" style="margin-top: 1.5rem; background: rgba(255,255,255,0.08);">
-        <i class="fa-solid fa-arrow-right"></i> استعلام عن نتيجة أخرى
+      <button type="button" class="btn-submit btn-secondary" id="backBtn">
+        <i class="fa-solid fa-arrow-right"></i>
+        <span>استعلام عن نتيجة أخرى</span>
       </button>
     </div>
 
@@ -98,14 +113,14 @@
         <h3>جاري تنظيم الدخول للموقع</h3>
         <p class="modal-text-desc">يوجد ضغط عالي حالياً على السيرفر، تم إدراجك في طابور الانتظار للحفاظ على استقرار الخدمة.</p>
         
-        <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; margin: 1rem 0; border: 1px solid var(--border);">
-          <div style="font-size: 0.85rem; color: var(--text-muted);">ترتيبك الحالي في الانتظار:</div>
-          <div id="queuePosition" style="font-size: 2.2rem; font-weight: 900; color: var(--primary);">#1</div>
-          <div class="progress-bar-wrapper" style="margin-top: 0.75rem;">
+        <div class="queue-info-card">
+          <div class="queue-label">ترتيبك الحالي في الانتظار:</div>
+          <div id="queuePosition" class="queue-number">#1</div>
+          <div class="progress-bar-wrapper">
             <div id="queueProgress" class="progress-bar-fill" style="width: 15%;"></div>
           </div>
         </div>
-        <p style="font-size: 0.8rem; color: var(--text-muted);">سيتم تحويلك تلقائياً خلال لحظات...</p>
+        <p class="queue-subtext">سيتم تحويلك تلقائياً خلال لحظات...</p>
       </div>
     </div>
 
