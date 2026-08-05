@@ -1,6 +1,6 @@
 // js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
 
-import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, PACKAGE_CATEGORIES } from "../includes/config.js?v=6.0.1";
+import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM } from "../includes/config.js?v=6.0.2";
 import {
   getExamBySlug,
   getExamById,
@@ -12,12 +12,12 @@ import {
   savePackageSelections,
   loadQuestions,
   submitExamAttempt,
-} from "../includes/functions.js?v=2.0.1";
+} from "../includes/functions.js?v=2.0.2";
 
 // =======================================
 // آلية التحديث التلقائي للنسخة (Cache Control)
 // =======================================
-const CURRENT_APP_VERSION = "2.0.1";
+const CURRENT_APP_VERSION = "2.0.2";
 (function checkAppVersion() {
   const savedVersion = localStorage.getItem("app_sys_version");
   if (savedVersion !== CURRENT_APP_VERSION) {
@@ -54,6 +54,43 @@ const attemptStorageKey = (examId) => `attempt_id_${examId}`;
 let currentExam = null;
 let currentAttempt = null;
 let isSubmittingLock = false;
+
+/* =======================================
+   تحديث عنوان الصفحة والمعاينة (Link Preview)
+======================================= */
+function updatePageTitle(exam) {
+  if (!exam) return;
+  let titleText = "";
+  const examName = exam.name || "";
+  const isShabab = examName.includes("شباب") || exam.slug?.includes("shabab") || exam.json_file?.includes("pk1");
+
+  if (isShabab) {
+    titleText = "امتحان شباب (خدام - إعداد خدام - جامعة - خريجين)";
+  } else if (examName.startsWith("امتحان")) {
+    titleText = examName;
+  } else {
+    titleText = `امتحان ${examName}`;
+  }
+
+  document.title = titleText;
+
+  // تحديث الميتا تاج لتظهر الصورة والمعاينة الصحيحة عند المشاركة على واتساب
+  let ogTitle = document.querySelector('meta[property="og:title"]');
+  if (!ogTitle) {
+    ogTitle = document.createElement("meta");
+    ogTitle.setAttribute("property", "og:title");
+    document.head.appendChild(ogTitle);
+  }
+  ogTitle.setAttribute("content", titleText);
+
+  let twitterTitle = document.querySelector('meta[name="twitter:title"]');
+  if (!twitterTitle) {
+    twitterTitle = document.createElement("meta");
+    twitterTitle.setAttribute("name", "twitter:title");
+    document.head.appendChild(twitterTitle);
+  }
+  twitterTitle.setAttribute("content", titleText);
+}
 
 /* =======================================
    المودال المشترك
@@ -129,6 +166,9 @@ async function init() {
     showNotFoundMessage(`الامتحان المطلوب غير موجود حالياً أو متوقف.`);
     return;
   }
+
+  // تحديث عنوان الصفحة فور تحميل الامتحان
+  updatePageTitle(currentExam);
 
   const savedId = localStorage.getItem(attemptStorageKey(currentExam.id));
   if (savedId) {
@@ -232,76 +272,265 @@ function showRegistration() {
 ======================================= */
 async function showPackages() {
   showScreen("packages");
-  const packages = await loadPackages();
+  const examName = currentExam?.name || "";
+  const isShabab = examName.includes("شباب") || currentExam?.slug?.includes("shabab") || currentExam?.json_file?.includes("pk1");
+  const isSecondary = examName.includes("ثانوي") || currentExam?.slug?.includes("thanawi");
+  const pkgFile = isShabab ? "pk1.json" : "pk.json";
+
+  const packages = await loadPackages(pkgFile);
   const container = document.getElementById("packagesContainer");
 
   const activityItems = packages["أنشطة"] || [];
   const individualItems = packages["اللعب الفردي"] || [];
+  const teamItems = packages["اللعب الجماعي"] || [];
 
-  container.innerHTML = `
-    <div class="pkg-card" data-category="أنشطة">
-      <div class="pkg-card-title">
-        <h3>أنشطة</h3>
-        <span class="limit-badge">اختر حتى ${MAX_ACTIVITIES} أنشطة كحد أقصى</span>
+  if (isShabab) {
+    // امتحان الموضوع الأساسي - شباب
+    container.innerHTML = `
+      <div class="pkg-card" data-category="أنشطة">
+        <div class="pkg-card-title">
+          <h3>أنشطة</h3>
+          <span class="limit-badge">اختر حتى 3 أنشطة كحد أقصى (اختياري)</span>
+        </div>
+        <div class="pkg-options">
+          ${
+            activityItems.length
+              ? activityItems.map((item) => optionHtml("أنشطة", item)).join("")
+              : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً.</div>`
+          }
+        </div>
       </div>
-      <div class="pkg-options">
-        ${
-          activityItems.length
-            ? activityItems.map((item) => optionHtml("أنشطة", item)).join("")
-            : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً في هذا القسم.</div>`
+
+      <div class="pkg-card" data-category="اللعب الفردي">
+        <div class="pkg-card-title">
+          <h3>اللعب الفردي</h3>
+          <span class="limit-badge">اختر حتى 3 ألعاب كحد أقصى (اختياري)</span>
+        </div>
+        <div class="pkg-options">
+          ${
+            individualItems.length
+              ? individualItems.map((item) => optionHtml("اللعب الفردي", item)).join("")
+              : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً.</div>`
+          }
+        </div>
+      </div>
+    `;
+
+    const activitiesCard = container.querySelector('.pkg-card[data-category="أنشطة"]');
+    const individualCard = container.querySelector('.pkg-card[data-category="اللعب الفردي"]');
+
+    activitiesCard?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:checked').length;
+        if (checkedCount > 3) {
+          e.target.checked = false;
+          e.target.closest(".pkg-option")?.classList.remove("selected-active");
+          showModal({
+            type: "alert",
+            title: "⚠️ الحد الأقصى للأنشطة",
+            confirmText: "حسناً، فهمت",
+            text: "لا يمكنك اختيار أكثر من 3 أنشطة كحد أقصى."
+          });
+        } else {
+          e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
         }
-      </div>
-    </div>
+      });
+    });
 
-    <div class="pkg-card" id="individualCard" data-category="اللعب الفردي">
-      <div class="pkg-card-title">
-        <h3>اللعب الفردي</h3>
-        <span class="limit-badge">اختر 3 ألعاب كحد أقصى</span>
-      </div>
-      <div class="pkg-options">
-        ${
-          individualItems.length
-            ? individualItems.map((item) => optionHtml("اللعب الفردي", item)).join("")
-            : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً في هذا القسم.</div>`
+    individualCard?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const checkedCount = individualCard.querySelectorAll('input[type="checkbox"]:checked').length;
+        if (checkedCount > 3) {
+          e.target.checked = false;
+          e.target.closest(".pkg-option")?.classList.remove("selected-active");
+          showModal({
+            type: "alert",
+            title: "⚠️ الحد الأقصى للعب الفردي",
+            confirmText: "حسناً، فهمت",
+            text: "لا يمكنك اختيار أكثر من 3 ألعاب فردية كحد أقصى."
+          });
+        } else {
+          e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
         }
+      });
+    });
+
+  } else {
+    // امتحانات الدرس الأساسي (5 و6، إعدادي، ثانوي، قانا الجليل)
+    let sportsHtml = `
+      <div class="pkg-card hidden" id="individualCard" data-category="اللعب الفردي">
+        <div class="pkg-card-title">
+          <h3>اللعب الفردي</h3>
+          <span class="limit-badge">${isSecondary ? "اختر حتى لعبتين كحد أقصى" : "لعبة واحدة (مع جماعية) أو لعبتين (بدون جماعية)"}</span>
+        </div>
+        <div class="pkg-options">
+          ${
+            individualItems.length
+              ? individualItems.map((item) => optionHtml("اللعب الفردي", item)).join("")
+              : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً.</div>`
+          }
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  const activitiesCard = container.querySelector('.pkg-card[data-category="أنشطة"]');
-  const individualCard = document.getElementById("individualCard");
+    if (!isSecondary && teamItems.length) {
+      sportsHtml += `
+        <div class="pkg-card hidden" id="teamCard" data-category="اللعب الجماعي">
+          <div class="pkg-card-title">
+            <h3>اللعب الجماعي</h3>
+            <span class="limit-badge">اختر لعبة جماعية واحدة كحد أقصى</span>
+          </div>
+          <div class="pkg-options">
+            ${teamItems.map((item) => optionHtml("اللعب الجماعي", item)).join("")}
+          </div>
+        </div>
+      `;
+    }
 
-  activitiesCard.querySelectorAll('input[type="checkbox"]').forEach((input) => {
-    input.addEventListener("change", (e) => {
-      const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:checked').length;
-      if (checkedCount > MAX_ACTIVITIES) {
-        e.target.checked = false;
-        e.target.closest(".pkg-option")?.classList.remove("selected-active");
-        showModal({ type: "alert", title: "⚠️ الحد الأقصى للأنشطة", confirmText: "حسناً، فهمت", text: `لا يمكنك اختيار أكثر من ${MAX_ACTIVITIES} أنشطة فقط.` });
-      } else {
-        e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
-      }
+    container.innerHTML = `
+      <div class="pkg-card" id="activitiesCard" data-category="أنشطة">
+        <div class="pkg-card-title">
+          <h3>أنشطة</h3>
+          <span class="limit-badge">اختر حتى 3 أنشطة كحد أقصى (المسابقات الرياضية غير محسوبة)</span>
+        </div>
+        <div class="pkg-options">
+          ${
+            activityItems.length
+              ? activityItems.map((item) => optionHtml("أنشطة", item)).join("")
+              : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً.</div>`
+          }
+        </div>
+      </div>
+      ${sportsHtml}
+    `;
+
+    const activitiesCard = document.getElementById("activitiesCard");
+    const individualCard = document.getElementById("individualCard");
+    const teamCard = document.getElementById("teamCard");
+
+    // أحداث اختيار الأنشطة
+    activitiesCard?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const sportsInput = activitiesCard.querySelector(`input[value="${SPORTS_TOGGLE_ITEM}"]`);
+        const isSportsChecked = sportsInput ? sportsInput.checked : false;
+
+        // حساب عدد الأنشطة العادية دون احتساب المسابقات الرياضية
+        const regularChecked = Array.from(activitiesCard.querySelectorAll('input[type="checkbox"]:checked'))
+          .filter((i) => i.value !== SPORTS_TOGGLE_ITEM);
+
+        if (regularChecked.length > MAX_ACTIVITIES && e.target.value !== SPORTS_TOGGLE_ITEM) {
+          e.target.checked = false;
+          e.target.closest(".pkg-option")?.classList.remove("selected-active");
+          showModal({
+            type: "alert",
+            title: "⚠️ الحد الأقصى للأنشطة",
+            confirmText: "حسناً، فهمت",
+            text: `لا يمكنك اختيار أكثر من ${MAX_ACTIVITIES} أنشطة أساسية.`
+          });
+        } else {
+          e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
+        }
+
+        // إظهار أو إخفاء أقسام الألعاب عند اختيار/إلغاء المسابقات الرياضية
+        if (isSportsChecked) {
+          individualCard?.classList.remove("hidden");
+          if (!isSecondary && teamCard) teamCard.classList.remove("hidden");
+        } else {
+          if (individualCard) {
+            individualCard.classList.add("hidden");
+            individualCard.querySelectorAll('input[type="checkbox"]').forEach((inp) => {
+              inp.checked = false;
+              inp.closest(".pkg-option")?.classList.remove("selected-active");
+            });
+          }
+          if (teamCard) {
+            teamCard.classList.add("hidden");
+            teamCard.querySelectorAll('input[type="checkbox"]').forEach((inp) => {
+              inp.checked = false;
+              inp.closest(".pkg-option")?.classList.remove("selected-active");
+            });
+          }
+        }
+      });
     });
-  });
 
-  individualCard.querySelectorAll('input[type="checkbox"]').forEach((input) => {
-    input.addEventListener("change", (e) => {
-      const checkedInCard = individualCard.querySelectorAll('input[type="checkbox"]:checked');
-      if (checkedInCard.length > 3) {
-        e.target.checked = false;
-        e.target.closest(".pkg-option")?.classList.remove("selected-active");
-        showModal({
-          type: "alert",
-          title: "⚠️ الحد الأقصى للعب الفردي",
-          confirmText: "حسناً، فهمت",
-          text: "لا يمكنك اختيار أكثر من 3 ألعاب كحد أقصى في اللعب الفردي."
-        });
-      } else {
-        e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
-      }
+    // أحداث اختيار اللعب الفردي
+    individualCard?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const checkedInd = Array.from(individualCard.querySelectorAll('input[type="checkbox"]:checked'));
+        const checkedTeam = teamCard ? Array.from(teamCard.querySelectorAll('input[type="checkbox"]:checked')) : [];
+
+        if (isSecondary) {
+          if (checkedInd.length > 2) {
+            e.target.checked = false;
+            e.target.closest(".pkg-option")?.classList.remove("selected-active");
+            showModal({
+              type: "alert",
+              title: "⚠️ الحد الأقصى للعب الفردي",
+              confirmText: "حسناً، فهمت",
+              text: "في امتحان ثانوي، يُسمح باختيار لعبتين من اللعب الفردي كحد أقصى."
+            });
+          } else {
+            e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
+          }
+        } else {
+          if (checkedTeam.length === 1 && checkedInd.length > 1) {
+            e.target.checked = false;
+            e.target.closest(".pkg-option")?.classList.remove("selected-active");
+            showModal({
+              type: "alert",
+              title: "⚠️ تنبيه الاختيار",
+              confirmText: "حسناً، فهمت",
+              text: "عند اختيار لعبة جماعية، يُسمح باختيار لعبة فردية واحدة فقط (أو اختيار لعبتين فرديتين بدون لعبة جماعية)."
+            });
+          } else if (checkedTeam.length === 0 && checkedInd.length > 2) {
+            e.target.checked = false;
+            e.target.closest(".pkg-option")?.classList.remove("selected-active");
+            showModal({
+              type: "alert",
+              title: "⚠️ الحد الأقصى للعب الفردي",
+              confirmText: "حسناً، فهمت",
+              text: "لا يمكنك اختيار أكثر من لعبتين من اللعب الفردي."
+            });
+          } else {
+            e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
+          }
+        }
+      });
     });
-  });
 
+    // أحداث اختيار اللعب الجماعي
+    teamCard?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const checkedTeam = Array.from(teamCard.querySelectorAll('input[type="checkbox"]:checked'));
+        const checkedInd = individualCard ? Array.from(individualCard.querySelectorAll('input[type="checkbox"]:checked')) : [];
+
+        if (checkedTeam.length > 1) {
+          e.target.checked = false;
+          e.target.closest(".pkg-option")?.classList.remove("selected-active");
+          showModal({
+            type: "alert",
+            title: "⚠️ الحد الأقصى للعب الجماعي",
+            confirmText: "حسناً، فهمت",
+            text: "لا يُسمح باختيار أكثر من لعبة جماعية واحدة."
+          });
+        } else if (checkedTeam.length === 1 && checkedInd.length > 1) {
+          e.target.checked = false;
+          e.target.closest(".pkg-option")?.classList.remove("selected-active");
+          showModal({
+            type: "alert",
+            title: "⚠️ تنبيه الاختيار",
+            confirmText: "حسناً، فهمت",
+            text: "لا يمكنك اختيار لعبة جماعية عند اختيار لعبتين فرديتين. يمكنك اختيار لعبة جماعية واحدة مع لعبة فردية واحدة فقط."
+          });
+        } else {
+          e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
+        }
+      });
+    });
+  }
+
+  // زر مراجعة الاختيار والدخول
   const reviewBtn = document.getElementById("reviewPackagesBtn");
   if (reviewBtn) {
     const newReviewBtn = reviewBtn.cloneNode(true);
@@ -310,18 +539,19 @@ async function showPackages() {
     newReviewBtn.addEventListener("click", () => {
       const selections = collectSelections(container);
       const summaryHtml = Object.entries(selections)
-        .map(([cat, items]) => `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(cat)}:</strong> ${items.length ? items.map(escapeHtml).join("، ") : "لم يتم الاختيار"}</div>`)
+        .filter(([cat, items]) => items && items.length > 0)
+        .map(([cat, items]) => `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(cat)}:</strong> ${items.map(escapeHtml).join("، ")}</div>`)
         .join("");
 
       showModal({
         type: "success",
         title: "تأكيد الاختيار",
-        summaryHtml,
+        summaryHtml: summaryHtml || `<div style="color:#94a3b8;">لم تقم باختيار أي نشاط (يمكنك الاستمرار).</div>`,
         confirmText: "تأكيد والدخول للامتحان",
         cancelText: "تعديل الاختيار",
         onCancel: () => {},
         onConfirm: async () => {
-          await savePackageSelections(currentAttempt.id, selections, true);
+          await savePackageSelections(currentAttempt.id, selections, pkgFile);
           await ensureExamStarted(currentAttempt.id);
           currentAttempt = await getAttempt(currentAttempt.id);
           startExam();
@@ -340,10 +570,10 @@ function optionHtml(category, item) {
 
 function collectSelections(container) {
   const result = {};
-  Object.keys(PACKAGE_CATEGORIES).forEach((cat) => (result[cat] = []));
   container.querySelectorAll(".pkg-card").forEach((card) => {
     if (card.classList.contains("hidden")) return;
     const category = card.dataset.category;
+    if (!category) return;
     const values = Array.from(card.querySelectorAll("input:checked"))
       .map((i) => i.value)
       .filter((v) => v && v !== "on");
@@ -530,15 +760,11 @@ function evaluateProgress() {
   if (text) text.textContent = `تم حل ${answeredCount} من أصل ${total} أسئلة`;
 }
 
-/**
- * دالة تحويل التواريخ بشكل آمن وضمان توحيد المناطق الزمنية (UTC)
- */
 function safeParseDate(dateStr) {
   if (!dateStr) return null;
   if (typeof dateStr === "number") return dateStr;
 
   let s = String(dateStr).trim().replace(" ", "T");
-  // إذا لم يكن التاريخ يحتوي على تحديد للـ TimeZone يتم إضافة 'Z' لضمان المعالجة كـ UTC
   if (!s.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(s)) {
     s += "Z";
   }
@@ -547,18 +773,15 @@ function safeParseDate(dateStr) {
 }
 
 function startTimer() {
-  const durationSec = Number(EXAM_DURATION_SECONDS) || 1800; // 30 دقيقة افتراضياً
+  const durationSec = Number(EXAM_DURATION_SECONDS) || 1800;
   const localTimerKey = `timer_start_ms_${attemptId}`;
 
   let savedLocalMs = localStorage.getItem(localTimerKey);
   savedLocalMs = savedLocalMs ? Number(savedLocalMs) : null;
 
-  // جلب وقت البداية الحقيقي من الامتحان فقط (exam_started_at)
   const dbStartMs = safeParseDate(currentAttempt?.exam_started_at || currentAttempt?.start_time);
-
   const nowMs = Date.now();
 
-  // التحقق من صلاحية التاريخ المخزن محلياً أو القادم من قاعدة البيانات
   if (savedLocalMs && !isNaN(savedLocalMs) && savedLocalMs > 0 && (nowMs - savedLocalMs) < (durationSec * 1000)) {
     examStartedAtMs = savedLocalMs;
   } else if (dbStartMs && (nowMs - dbStartMs) < (durationSec * 1000) && (nowMs - dbStartMs) >= 0) {
