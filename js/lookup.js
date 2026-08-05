@@ -49,7 +49,7 @@ class TrafficQueueManager {
 const trafficManager = new TrafficQueueManager();
 
 /* ==========================================================
-   المنطق الأساسي للاستعلام والتحقق من رقم الهاتف
+   المنطق الأساسي للاستعلام والتحقق والنافذة المنبثقة
    ========================================================== */
 document.addEventListener("DOMContentLoaded", async () => {
   const examSelect = document.getElementById("examSelect");
@@ -65,20 +65,53 @@ document.addEventListener("DOMContentLoaded", async () => {
   const queuePosition = document.getElementById("queuePosition");
   const queueProgress = document.getElementById("queueProgress");
 
+  // عناصر نافذة عدم وجود النتيجة
+  const notFoundModal = document.getElementById("notFoundModal");
+  const closeNotFoundBtn = document.getElementById("closeNotFoundBtn");
+  const ackNotFoundBtn = document.getElementById("ackNotFoundBtn");
+
   const urlParams = new URLSearchParams(window.location.search);
   const targetSlug = urlParams.get("slug") || urlParams.get("exam");
+
+  // --- التحكم بفتح وإغلاق مودال الإعادة عند عدم توفر النتيجة ---
+  function openNotFoundModal() {
+    if (notFoundModal) {
+      notFoundModal.classList.add("active");
+      document.body.style.overflow = "hidden"; // منع التمرير أثناء ظهور المودال
+    }
+  }
+
+  function closeNotFoundModal() {
+    if (notFoundModal) {
+      notFoundModal.classList.remove("active");
+      document.body.style.overflow = "";
+    }
+  }
+
+  if (closeNotFoundBtn) closeNotFoundBtn.addEventListener("click", closeNotFoundModal);
+  if (ackNotFoundBtn) ackNotFoundBtn.addEventListener("click", closeNotFoundModal);
+  
+  if (notFoundModal) {
+    notFoundModal.addEventListener("click", (e) => {
+      if (e.target === notFoundModal) closeNotFoundModal();
+    });
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && notFoundModal && notFoundModal.classList.contains("active")) {
+      closeNotFoundModal();
+    }
+  });
 
   // --- تقييد خانة رقم الهاتف لتقبل 11 رقماً فقط ومنع الأحرف ---
   if (phoneInput) {
     phoneInput.addEventListener("input", (e) => {
-      // إزالة أي رموز أو أحرف غير أرقام
       let cleanVal = e.target.value.replace(/\D/g, "");
       if (cleanVal.length > 11) {
         cleanVal = cleanVal.substring(0, 11);
       }
       e.target.value = cleanVal;
 
-      // تحديث عدّاد الأرقام
       if (phoneCounter) {
         phoneCounter.textContent = `${cleanVal.length}/11`;
         if (cleanVal.length === 11) {
@@ -109,7 +142,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     examSelect.innerHTML = `<option value="">خطأ في تحميل قائمة الامتحانات</option>`;
   }
 
-  // 2. معالجة نموذج الاستعلام مع الشروط الصارمة
+  // 2. معالجة نموذج الاستعلام مع إظهار كارت الإعادة المنظم
   lookupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     lookupError.classList.add("hidden");
@@ -117,13 +150,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const examId = examSelect.value;
     const phone = phoneInput.value.trim();
 
-    // التحقق من الاختيارات الأساسية
     if (!examId) {
       showError("يرجى اختيار الامتحان من القائمة أولاً.");
       return;
     }
 
-    // شرط صارم: يجب أن يكون رقم الهاتف 11 رقماً بالضبط
     if (!phone || phone.length !== 11) {
       showError("يرجى إدخال رقم هاتف صحيح يتكون من 11 رقماً بالضبط.");
       return;
@@ -159,9 +190,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       queueModal.classList.remove("active");
 
-      // الشرط الخاص المطلوب بدقة عند عدم وجود نتيجة للرقم
+      // الشرط: إذا لم توجد نتيجة للرقم المكتوب بالامتحان المختار
       if (!attempt) {
-        showError("هذا الرقم لم يدخل أي امتحان للامتحان المختار");
+        openNotFoundModal(); // عرض كارت المودال الخرافي في منتصف الشاشة
         return;
       }
 
@@ -178,7 +209,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // 3. عرض النتيجة والأنشطة
+  // 3. عرض النتيجة والأنشطة بشكل منظم وواضح
   function renderResultCard(attempt, packages) {
     document.getElementById("resStudentName").textContent = attempt.user_name || "بدون اسم";
     document.getElementById("resPhone").textContent = attempt.user_phone;
@@ -227,11 +258,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     searchCard.classList.add("hidden");
     resultCard.classList.remove("hidden");
+    resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   backBtn.addEventListener("click", () => {
     resultCard.classList.add("hidden");
     searchCard.classList.remove("hidden");
+    searchCard.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   function showError(msg) {
