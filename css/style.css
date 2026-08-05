@@ -69,7 +69,7 @@ a { color: inherit; text-decoration: none; }
 
 .dev-credit {
   text-align: center;
-  padding: 0.75rem 0;
+  padding: 1rem 0;
   font-size: 0.75rem;
   color: rgba(148, 163, 184, 0.45);
   letter-spacing: 0.5px;
@@ -121,10 +121,10 @@ a { color: inherit; text-decoration: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ==========================================================
-   INDEX (الصفحة الرئيسية - عرض الامتحانات الأربعة)
+   INDEX (الصفحة الرئيسية - عرض الامتحانات)
    ========================================================== */
 .idx-nav {
-  position: sticky; top: 0; z-index: 50;
+  position: sticky; top: 0; z-index: 50; width: 100%;
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   background: rgba(15, 23, 42, 0.85); border-bottom: 1px solid var(--card-border);
   padding: 1.1rem 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;
@@ -139,12 +139,12 @@ a { color: inherit; text-decoration: none; }
   background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 
-.idx-main { max-width: 1100px; margin: 0 auto; padding: 3rem 1.5rem 5rem; position: relative; z-index: 10; }
+.idx-main { width: 100%; max-width: 1100px; margin: 0 auto; padding: 3rem 1.5rem 5rem; position: relative; z-index: 10; }
 .idx-header { text-align: center; max-width: 640px; margin: 0 auto 3rem; }
 .idx-header h2 { font-size: 1.9rem; font-weight: 800; margin-bottom: 0.75rem; color: #fff; }
 .idx-header p { color: var(--text-muted); font-size: 1.05rem; line-height: 1.7; }
 
-.idx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.75rem; }
+.idx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.75rem; width: 100%; }
 
 .idx-card {
   background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
@@ -173,10 +173,10 @@ a { color: inherit; text-decoration: none; }
 /* ==========================================================
    AUTH / PACKAGES / EXAM (مشترك)
    ========================================================== */
-.auth-container, .pkg-container { width: 100%; max-width: 680px; margin: 0 auto; padding: 2rem 1rem; position: relative; z-index: 10; }
+.auth-container, .pkg-container { width: 100%; max-width: 680px; margin: 2rem auto; padding: 0 1rem; position: relative; z-index: 10; }
 .pkg-container { max-width: 850px; }
 
-.auth-card, .result-card {
+.auth-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
@@ -387,26 +387,48 @@ textarea.text-answer-input { min-height: 120px; resize: vertical; line-height: 1
 .btn-finish:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(239,68,68,0.45); }
 
 /* ==========================================================
-   نتيجة الامتحان
+   نتيجة الامتحان / الاستعلام عن النتيجة
    ========================================================== */
-body.results-page { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem 1rem 3rem; min-height: 100vh; }
-.result-card { background: var(--card-bg); border: 1px solid var(--card-border); padding: 2.5rem; border-radius: var(--radius-lg); text-align: center; max-width: 500px; width: 100%; box-shadow: var(--shadow); margin-bottom: 2rem; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-.result-icon { font-size: 60px; margin-bottom: 1rem; }
+body.results-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+.result-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  padding: 2.5rem 2rem;
+  border-radius: var(--radius-lg);
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  margin: auto;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: relative;
+  z-index: 10;
+  animation: fadeInUp 0.4s ease;
+}
+.result-icon { font-size: 60px; margin-bottom: 1rem; line-height: 1; }
 .result-icon.pass { color: var(--success); filter: drop-shadow(0 0 15px var(--success-glow)); }
 .result-icon.fail { color: var(--danger); filter: drop-shadow(0 0 15px var(--danger-glow)); }
 .result-icon.pending { color: var(--primary); filter: drop-shadow(0 0 15px var(--primary-glow)); }
 .result-card h2 { margin-bottom: 0.4rem; font-size: 1.4rem; font-weight: 800; color: #fff; }
 .result-student-name { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-.status-pill { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1.25rem; border-radius: 50px; font-weight: 700; font-size: 0.95rem; margin-bottom: 1.75rem; }
+.status-pill { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.55rem 1.4rem; border-radius: 50px; font-weight: 700; font-size: 0.95rem; margin-bottom: 1.75rem; }
 .status-pill.pass { background: rgba(16,185,129,0.12); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
 .status-pill.fail { background: rgba(239,68,68,0.12); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 1rem; }
-.stat-box { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 14px; padding: 1rem 0.75rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.9rem; margin-bottom: 1rem; width: 100%; }
+.stat-box { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 14px; padding: 1rem 0.75rem; text-align: center; }
 .stat-box .label { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.4rem; }
 .stat-box .value { font-size: 1.3rem; font-weight: 800; color: #fff; }
-.result-desc { color: var(--text-muted); line-height: 1.7; margin-top: 1rem; }
+.result-desc { color: var(--text-muted); line-height: 1.7; margin-top: 1rem; font-size: 0.95rem; }
 .btn-exit { margin-top: 1.75rem; display: inline-block; padding: 12px 20px; background: linear-gradient(135deg, var(--danger), var(--danger-hover)); color: #fff; border-radius: var(--radius-md); cursor: pointer; border: none; font-size: 16px; width: 100%; font-weight: 700; transition: var(--transition); box-shadow: 0 4px 15px var(--danger-glow); }
-.btn-exit:hover { transform: translateY(-2px); }
+.btn-exit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
 
 /* ==========================================================
    لوحة الإدارة
