@@ -1,8 +1,9 @@
 /* ==========================================================
-   style.css — ستايل موحّد لكل صفحات الموقع
-   نسخة مطوّرة بالكامل: هوية بصرية أرقى، تفاصيل أدق،
-   وأهم حاجة: كل الأزرار — حتى اللي من غير كلاس — بقالها شكل واضح واحترافي.
+   style.css — ستايل موحّد لكل صفحات الموقع (نسخة مطوّرة بالكامل)
+   التركيز: شبكة مسافات متناسقة للزراير، توسيط الشاشات والنتائج،
+   ورسائل تحذير عصرية ونظام تجاوب تام لكافة الشاشات.
    ========================================================== */
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -32,7 +33,7 @@
   --border-strong: rgba(255, 255, 255, 0.18);
   --border-glow: rgba(59, 130, 246, 0.4);
 
-  /* ---- التدرّج البصري المميّز (التوقيع الرسمي للموقع) ---- */
+  /* ---- التدرّج البصري المميّز ---- */
   --brand-gradient: linear-gradient(90deg, #3b82f6, #06b6d4, #10b981, #06b6d4, #3b82f6);
 
   /* ---- الظلال ---- */
@@ -59,13 +60,12 @@
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-spring: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* ---- نظام المسافات الموحّد (Spacing System) ----
-     أي مكان فيه أكتر من عنصر جنب بعض (أزرار، شيبس، تابز)
-     بيستخدم نفس القيمة دي، عشان محدش يفضل لازق في التاني. */
+  /* ---- نظام المسافات الموحّد للأزرار والعناصر (Spacing System) ---- */
   --gap-xs: 0.5rem;
   --gap-sm: 0.75rem;
   --gap-md: 1rem;
   --gap-lg: 1.5rem;
+  --gap-xl: 2rem;
 }
 
 html {
@@ -84,7 +84,6 @@ body {
     radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
 }
 
-/* شبكة دقيقة جدًا في الخلفية لإحساس تقني هادئ بدون ما تلفت النظر */
 body::after {
   content: '';
   position: fixed;
@@ -108,7 +107,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* شريط تمرير أنيق */
-::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.25);
@@ -116,7 +115,7 @@ a { color: inherit; text-decoration: none; }
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.5); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.5); }
 
 .dev-credit {
   text-align: center;
@@ -126,9 +125,6 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: 0.5px;
 }
 
-/* ==========================================================
-   وضوح الفوكس (Accessibility) — يشتغل بالكيبورد فقط
-   ========================================================== */
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
@@ -146,19 +142,27 @@ a { color: inherit; text-decoration: none; }
 
 /* ---------- شاشة تحميل ---------- */
 .loading-screen {
-  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
   color: var(--text-muted);
 }
 .spinner {
-  width: 44px; height: 44px; border-radius: 50%;
-  border: 4px solid rgba(59, 130, 246, 0.15); border-top-color: var(--primary);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 4px solid rgba(59, 130, 246, 0.15);
+  border-top-color: var(--primary);
   animation: spin 0.8s linear infinite;
   box-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ==========================================================
-   خلفية جمالية متحركة (Lookup & Index)
+   خلفية جمالية متحركة
    ========================================================== */
 .bg-glow-orb {
   position: fixed;
@@ -191,7 +195,6 @@ a { color: inherit; text-decoration: none; }
   100% { transform: translate(-24px, 22px) scale(0.94); }
 }
 
-/* شريط تدرّج متحرك — التوقيع البصري المشترك لكل الكروت الرئيسية */
 .brand-flow-bar {
   background: var(--brand-gradient);
   background-size: 300% 100%;
@@ -477,14 +480,9 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ==========================================================
-   نظام الأزرار الموحّد (Buttons System)
-   كل زرار في الموقع — سواء له كلاس محدد أو لأ — بيطلع
-   بشكل جاهز وواضح تلقائيًا من غير ما حد ينساه.
+   نظام الأزرار الموحّد (Buttons System) — معاد هندسته بالكامل
    ========================================================== */
 
-/* --- القاعدة الافتراضية لأي زرار في الموقع (Fallback Style) ---
-   أي <button> أو <input type="button/submit"> من غير كلاس مخصص
-   هياخد الشكل ده تلقائيًا، عشان محدش يفضل زرار عاري بدون ستايل. */
 button,
 input[type="button"],
 input[type="submit"],
@@ -508,6 +506,7 @@ input[type="reset"] {
   line-height: 1.4;
   vertical-align: middle;
 }
+
 button:hover,
 input[type="button"]:hover,
 input[type="submit"]:hover,
@@ -515,6 +514,7 @@ input[type="reset"]:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 26px rgba(59, 130, 246, 0.45);
 }
+
 button:active,
 input[type="button"]:active,
 input[type="submit"]:active,
@@ -522,6 +522,7 @@ input[type="reset"]:active {
   transform: translateY(0);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
+
 button:disabled,
 input[type="button"]:disabled,
 input[type="submit"]:disabled {
@@ -531,46 +532,20 @@ input[type="submit"]:disabled {
   transform: none !important;
 }
 
-/* --- شبكة أمان عامة (Global Safety Net) ---
-   أي زرارين (أو أكتر) جنب بعض في نفس الحاوية، حتى لو الحاوية دي
-   مش معمول لها flex/grid وgap يدويًا، مش هيلزقوا في بعض تاني:
-   كل زرار غير الأول بياخد مسافة تلقائي على الجنب اللي جاي منه. */
-button + button,
-button + input[type="button"],
-button + input[type="submit"],
-input[type="button"] + button,
-input[type="submit"] + button,
-.btn + .btn,
-.btn + button,
-button + .btn,
-.btn-action + .btn-action {
-  margin-inline-start: var(--gap-sm);
-}
-
-/* أي حاوية فيها أكتر من زرار (فورم أكشنز، تابز، هيدرز..) بتتصرف
-   دايمًا كـ flex مع فراغ واضح ومتساوي، ومتمركزة افتراضيًا. */
+/* ضبط آمن ومتناسق لمجاميع الأزرار */
 .form-actions,
 .card-actions,
 .action-row,
-.btn-group {
+.btn-group,
+.modal-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: var(--gap-sm);
+  gap: var(--gap-md);
+  width: 100%;
 }
-.form-actions > button,
-.card-actions > button,
-.action-row > button,
-.btn-group > button,
-.form-actions > .btn,
-.card-actions > .btn,
-.action-row > .btn,
-.btn-group > .btn { margin-inline-start: 0; }
 
-/* --- Utility class عامة، تُستخدم لأي زرار يتضاف بالجافاسكريبت
-   ديناميكيًا (مثلًا داخل مودال أو رسالة) بدون الحاجة لتعريف
-   ستايل جديد كل مرة. استخدم: class="btn" أو "btn btn-primary/secondary/danger/success/ghost" --- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -628,7 +603,6 @@ button + .btn,
 .btn-lg { padding: 1.05rem 2rem; font-size: 1.05rem; }
 .btn-block { width: 100%; }
 
-/* --- الأزرار الخاصة الموجودة أصلًا في الموقع (أعلى تحديدًا فتفضل شغالة زي ما هي) --- */
 .btn-action {
   width: 100%;
   display: flex;
@@ -792,7 +766,7 @@ button + .btn,
 }
 
 /* ==========================================================
-   LOOKUP & RESULTS PAGE
+   LOOKUP & RESULTS PAGE (توسيط كامل للنظام والكروت)
    ========================================================== */
 .results-page {
   position: relative;
@@ -1016,7 +990,7 @@ button + .btn,
   color: var(--text-main);
   border: 1px solid var(--border);
   box-shadow: none;
-  margin-top: 1.75rem;
+  margin-top: 1.25rem;
 }
 
 .btn-submit.btn-secondary:hover {
@@ -1036,7 +1010,9 @@ button + .btn,
   font-size: 0.9rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
+  text-align: center;
   animation: shake 0.4s ease-in-out;
 }
 
@@ -1046,7 +1022,7 @@ button + .btn,
   40%, 80% { transform: translateX(6px); }
 }
 
-/* ---------- كارت عرض النتيجة (Result Card) ---------- */
+/* ---------- كارت عرض النتيجة (Result Card) المتمركز تمامًا ---------- */
 .result-card {
   background: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(26px);
@@ -1060,6 +1036,11 @@ button + .btn,
   animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: 0 auto;
 }
 
 .result-card::before {
@@ -1071,7 +1052,14 @@ button + .btn,
   animation: gradientFlow 6s ease infinite;
 }
 
-.result-header { text-align: center; margin-bottom: 2rem; display: flex; flex-direction: column; align-items: center; }
+.result-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
 
 .result-icon {
   font-size: 64px;
@@ -1109,6 +1097,7 @@ button + .btn,
   border-radius: 50px;
   font-weight: 800;
   font-size: 1rem;
+  margin-top: 0.25rem;
 }
 .status-pill.pass {
   background: rgba(16, 185, 129, 0.15);
@@ -1128,6 +1117,7 @@ button + .btn,
   grid-template-columns: repeat(2, 1fr);
   gap: 1.1rem;
   margin-bottom: 2rem;
+  width: 100%;
 }
 
 .stat-box {
@@ -1170,12 +1160,13 @@ button + .btn,
   font-size: 1.45rem;
 }
 
-/* قسم الأنشطة */
+/* قسم الأنشطة مع محاذاة عصرية */
 .activities-wrapper {
   margin-top: 1.75rem;
   padding-top: 1.75rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  text-align: right;
+  width: 100%;
+  text-align: center;
 }
 
 .activities-title {
@@ -1185,18 +1176,22 @@ button + .btn,
   margin-bottom: 1.25rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.6rem;
 }
 
 .activities-title i { color: #f59e0b; }
 
-.activities-container { display: flex; flex-direction: column; gap: var(--gap-md); }
+.activities-container { display: flex; flex-direction: column; gap: var(--gap-md); width: 100%; }
 
 .activity-block {
   background: rgba(5, 7, 13, 0.5);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .activity-cat-title {
@@ -1206,12 +1201,18 @@ button + .btn,
   margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
 }
 
 .activity-cat-title i { color: var(--primary); }
 
-.activity-chips-wrap { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.activity-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: center;
+}
 
 .activity-chip {
   display: inline-flex;
@@ -1251,15 +1252,13 @@ button + .btn,
 }
 
 /* ==========================================================
-   MODALS / رسائل التنبيه المنبثقة (Message Cards)
-   — أهم جزء اتطوّر: شكل أرقى، تسلسل بصري واضح،
-     وكل زرار جواها بقى له شكل صريح مهما كان اسم الكلاس بتاعه.
+   MODALS / رسائل التنبيه المنبثقة (Upgraded Alert Cards)
    ========================================================== */
 .custom-modal-overlay {
   position: fixed; inset: 0;
   background: rgba(2, 4, 10, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1320,7 +1319,6 @@ button + .btn,
   transition: var(--transition);
   padding: 0;
   box-shadow: none;
-  margin: 0 !important;
 }
 
 .modal-close-btn:hover {
@@ -1328,9 +1326,9 @@ button + .btn,
   color: #f87171;
   border-color: rgba(239, 68, 68, 0.4);
   transform: rotate(90deg);
-  box-shadow: none;
 }
 
+/* الأيقونات العصرية بالدعم المتكامل للحالات */
 .modal-icon-wrapper {
   width: 80px;
   height: 80px;
@@ -1340,34 +1338,39 @@ button + .btn,
   justify-content: center;
   margin: 0 auto 1.35rem;
   font-size: 2.3rem;
+  position: relative;
 }
 
 .modal-icon-wrapper.warning-badge {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(239, 68, 68, 0.12));
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.35);
-  box-shadow: 0 0 32px rgba(245, 158, 11, 0.22);
+  box-shadow: 0 0 32px rgba(245, 158, 11, 0.25);
   animation: pulseIcon 3s ease-in-out infinite alternate;
 }
 
-/* أنواع إضافية للأيقونة حسب سياق الرسالة، جاهزة للاستخدام */
 .modal-icon-wrapper.success-badge {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(6, 182, 212, 0.1));
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(6, 182, 212, 0.12));
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.35);
-  box-shadow: 0 0 32px rgba(16, 185, 129, 0.22);
+  box-shadow: 0 0 32px rgba(16, 185, 129, 0.25);
+  animation: pulseIcon 3s ease-in-out infinite alternate;
 }
+
 .modal-icon-wrapper.danger-badge {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(245, 158, 11, 0.1));
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(245, 158, 11, 0.12));
   color: #f87171;
   border: 1px solid rgba(239, 68, 68, 0.35);
-  box-shadow: 0 0 32px rgba(239, 68, 68, 0.22);
+  box-shadow: 0 0 32px rgba(239, 68, 68, 0.25);
+  animation: pulseIcon 3s ease-in-out infinite alternate;
 }
+
 .modal-icon-wrapper.info-badge {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(6, 182, 212, 0.12));
   color: #60a5fa;
   border: 1px solid rgba(59, 130, 246, 0.35);
-  box-shadow: 0 0 32px rgba(59, 130, 246, 0.22);
+  box-shadow: 0 0 32px rgba(59, 130, 246, 0.25);
+  animation: pulseIcon 3s ease-in-out infinite alternate;
 }
 
 .custom-modal-box h3.modal-title {
@@ -1388,22 +1391,22 @@ button + .btn,
   width: 100%;
 }
 
-/* --- منطقة أزرار المودال: أي أزرار جوه المودال بتترتب أوتوماتيك
-   جنب بعض بشكل واضح ومتباعد، وممكن تحطها جوه div.modal-actions --- */
 .modal-actions {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--gap-md);
-  margin-top: 1.75rem;
+  margin-top: 1.5rem;
   flex-wrap: wrap;
   width: 100%;
 }
-.modal-actions button,
-.modal-actions .btn { flex: 1; min-width: 140px; margin-inline-start: 0 !important; }
 
-/* أي زرار جوه المودال، حتى من غير كلاس، بياخد نفس القاعدة العامة لفوق
-   تلقائيًا. هنا بس بنضبط الألوان الجاهزة لأكتر سيناريوهين شائعين: */
+.modal-actions button,
+.modal-actions .btn {
+  flex: 1;
+  min-width: 140px;
+}
+
 .btn-modal-close,
 .btn-modal-primary {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
@@ -1421,7 +1424,7 @@ button + .btn,
   box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
 }
 
-/* كارت تفاصيل الإعادة */
+/* كارت تفاصيل الإعادة المحسن */
 .re-exam-notice-box {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
   border: 1px solid rgba(245, 158, 11, 0.3);
@@ -1505,8 +1508,7 @@ button + .btn,
 .queue-subtext { font-size: 0.82rem; color: var(--text-muted); }
 
 /* ==========================================================
-   TOAST / إشعار خفيف عائم (لأي رسالة سريعة تضيفها الجافاسكريبت)
-   استخدم: <div class="toast toast-success show">تم الحفظ بنجاح</div>
+   TOAST / إشعار خفيف عائم
    ========================================================== */
 .toast-stack {
   position: fixed;
@@ -1556,23 +1558,21 @@ button + .btn,
   padding: 0.2rem !important;
   width: 24px; height: 24px;
   border-radius: 50%;
-  margin-inline-start: 0 !important;
 }
 .toast-close:hover { color: #fff !important; background: rgba(255, 255, 255, 0.08) !important; transform: none; }
 
 /* ==========================================================
-   AUTH / PACKAGES / EXAM (مشترك)
+   AUTH / PACKAGES / EXAM
    ========================================================== */
-.auth-container, .pkg-container { width: 100%; max-width: 550px; margin: 0 auto; padding: 2rem 1.5rem; }
 .pkg-container { max-width: 800px; display: flex; flex-direction: column; align-items: center; }
 
 .warning-box, .submit-error-box {
   padding: 1.1rem 1.25rem; border-radius: 12px; margin-bottom: 1.75rem; font-size: 0.9rem; line-height: 1.7; width: 100%;
 }
-.warning-box { background: rgba(245, 158, 11, 0.07); border: 1px solid rgba(245, 158, 11, 0.22); color: #f59e0b; }
+.warning-box { background: rgba(245, 158, 11, 0.07); border: 1px solid rgba(245, 158, 11, 0.22); color: #f59e0b; text-align: center; }
 .submit-error-box {
   background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; font-weight: 600;
-  display: flex; align-items: center; gap: 0.75rem;
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem; text-align: center;
 }
 
 /* ---------- Packages ---------- */
@@ -1650,7 +1650,7 @@ textarea.text-answer-input { min-height: 120px; resize: vertical; line-height: 1
 .btn-finish:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(239, 68, 68, 0.45); }
 
 /* ==========================================================
-   لوحة الإدارة
+   لوحة الإدارة (Admin Panel)
    ========================================================== */
 html[data-theme] { color-scheme: light dark; }
 body.admin-page {
@@ -1662,7 +1662,6 @@ body.admin-page {
 body.admin-page::after { display: none; }
 html[data-theme="dark"] body.admin-page { --a-bg: #0b0f19; --a-surface: #111827; --a-border: rgba(148, 163, 184, 0.14); --a-text: #f8fafc; --a-text-soft: #94a3b8; }
 
-/* أزرار لوحة الإدارة تتبع نفس نظام الألوان الخاص بيها بدل الأزرق العام */
 body.admin-page button,
 body.admin-page input[type="button"],
 body.admin-page input[type="submit"] {
@@ -1675,7 +1674,7 @@ body.admin-page input[type="submit"] {
 .a-topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--gap-md); margin-bottom: 20px; }
 .a-topbar h1 { font-size: 1.35rem; font-weight: 800; }
 .a-topbar p { color: var(--a-text-soft); font-size: .85rem; margin-top: 3px; }
-.a-theme-btn { background: var(--a-surface); border: 1px solid var(--a-border); color: var(--a-text); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: .95rem; padding: 0; box-shadow: none; margin: 0 !important; }
+.a-theme-btn { background: var(--a-surface); border: 1px solid var(--a-border); color: var(--a-text); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: .95rem; padding: 0; box-shadow: none; }
 .a-theme-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.15); }
 
 .a-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--gap-md); margin-bottom: 18px; }
@@ -1684,14 +1683,14 @@ body.admin-page input[type="submit"] {
 .a-stat-card .lbl { color: var(--a-text-soft); font-size: .8rem; margin-top: 2px; }
 
 .a-tabs-row { display: flex; gap: var(--gap-sm); margin-bottom: 16px; flex-wrap: wrap; justify-content: center; }
-.a-tab-btn { padding: 9px 20px; border-radius: 50px; background: var(--a-surface); border: 1px solid var(--a-border); color: var(--a-text-soft); font-weight: 700; font-size: .87rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: none; margin-inline-start: 0 !important; }
+.a-tab-btn { padding: 9px 20px; border-radius: 50px; background: var(--a-surface); border: 1px solid var(--a-border); color: var(--a-text-soft); font-weight: 700; font-size: .87rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: none; }
 .a-tab-btn:hover { transform: none; }
 .a-tab-btn.active.pass { color: var(--a-success); background: var(--a-success-soft); border-color: var(--a-success); }
 .a-tab-btn.active.fail { color: var(--a-danger); background: var(--a-danger-soft); border-color: var(--a-danger); }
 
 .a-filter-bar { background: var(--a-surface); border: 1px solid var(--a-border); border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: var(--gap-sm); align-items: center; justify-content: center; }
 .a-filter-bar select { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--a-border); background: var(--a-bg); color: var(--a-text); font-family: inherit; min-width: 240px; }
-.a-filter-bar button { padding: 9px 16px; border-radius: 10px; border: none; background: var(--a-primary); color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px rgba(99, 102, 241, 0.25); margin-inline-start: 0 !important; }
+.a-filter-bar button { padding: 9px 16px; border-radius: 10px; border: none; background: var(--a-primary); color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px rgba(99, 102, 241, 0.25); }
 .a-filter-bar .clear-link { color: var(--a-danger); font-size: .82rem; font-weight: 700; background: transparent; box-shadow: none; padding: 4px 8px; }
 .a-filter-active-note { background: var(--a-primary-soft); color: var(--a-primary); padding: 4px 12px; border-radius: 50px; font-size: .78rem; font-weight: 700; }
 
@@ -1716,7 +1715,7 @@ table.a-table tbody tr:hover { background: var(--a-bg); }
 .a-empty-state { text-align: center; padding: 50px 20px; color: var(--a-text-soft); background: var(--a-surface); border-radius: 16px; }
 .a-empty-state i { font-size: 2.2rem; margin-bottom: 8px; display: block; }
 .a-pagination { display: flex; justify-content: center; gap: var(--gap-xs); margin-top: 18px; flex-wrap: wrap; }
-.a-pagination a, .a-pagination span { padding: 7px 13px; border-radius: 8px; background: var(--a-surface); border: 1px solid var(--a-border); font-size: .82rem; font-weight: 700; margin-inline-start: 0 !important; }
+.a-pagination a, .a-pagination span { padding: 7px 13px; border-radius: 8px; background: var(--a-surface); border: 1px solid var(--a-border); font-size: .82rem; font-weight: 700; }
 .a-pagination a.active { background: var(--a-primary); color: #fff; border-color: var(--a-primary); }
 
 /* ==========================================================
@@ -1727,7 +1726,6 @@ table.a-table tbody tr:hover { background: var(--a-bg); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* تتابع دخول تلقائي لكروت الـ Index لو الصفحة عندها عدة كروت */
 .idx-grid .idx-card:nth-child(1) { animation-delay: 0.05s; }
 .idx-grid .idx-card:nth-child(2) { animation-delay: 0.12s; }
 .idx-grid .idx-card:nth-child(3) { animation-delay: 0.19s; }
@@ -1736,24 +1734,30 @@ table.a-table tbody tr:hover { background: var(--a-bg); }
 .idx-grid .idx-card:nth-child(6) { animation-delay: 0.4s; }
 
 /* ==========================================================
-   RESPONSIVE DESIGN
+   RESPONSIVE DESIGN (التوافق الكامل والشامل)
    ========================================================== */
+@media (max-width: 992px) {
+  .idx-main { padding-top: 2.5rem; }
+  .stats-grid { gap: 0.85rem; }
+}
+
 @media (max-width: 768px) {
   .idx-nav .nav-container { flex-direction: column; align-items: center; gap: 0.85rem; text-align: center; }
   .idx-header h2 { font-size: 1.7rem; }
   .idx-header p { font-size: 0.95rem; }
   .idx-grid { grid-template-columns: 1fr; gap: 1.25rem; }
 
-  .auth-card, .result-card { padding: 1.75rem 1.25rem; border-radius: 18px; }
+  .auth-card, .result-card { padding: 2rem 1.35rem; border-radius: 18px; }
   .auth-header h2 { font-size: 1.5rem; }
   .stats-grid { grid-template-columns: 1fr; gap: 0.85rem; }
   .notice-grid { grid-template-columns: 1fr; }
 
-  .custom-modal-box { padding: 1.75rem 1.35rem 1.5rem; border-radius: 20px; }
-  .modal-icon-wrapper { width: 62px; height: 62px; font-size: 1.8rem; }
+  .custom-modal-box { padding: 2rem 1.35rem 1.5rem; border-radius: 20px; }
+  .modal-icon-wrapper { width: 68px; height: 68px; font-size: 1.9rem; }
   .modal-title { font-size: 1.25rem; }
-  .modal-actions { flex-direction: column; }
-  .modal-actions button, .modal-actions .btn { width: 100%; }
+  
+  .modal-actions { flex-direction: column; width: 100%; }
+  .modal-actions button, .modal-actions .btn { width: 100%; min-width: 100%; }
 
   .student-title { font-size: 1.45rem; }
   .stat-box .value { font-size: 1.2rem; }
@@ -1776,4 +1780,6 @@ table.a-table tbody tr:hover { background: var(--a-bg); }
   .nav-lookup-link { width: 100%; justify-content: center; padding: 0.6rem; }
   .btn-submit { padding: 1rem; font-size: 0.98rem; }
   .input-wrapper input, .input-wrapper select { padding-top: 0.9rem; padding-bottom: 0.9rem; font-size: 0.95rem; }
+  .custom-modal-box { padding: 1.75rem 1rem 1.25rem; }
+  .result-card { padding: 1.75rem 1rem; }
 }
