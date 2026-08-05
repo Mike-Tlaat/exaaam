@@ -5,7 +5,7 @@
   --bg-gradient: radial-gradient(circle at 50% -20%, #1e293b 0%, #0f172a 45%, #020617 100%);
   --card-bg: rgba(30, 41, 59, 0.65);
   --card-border: rgba(255, 255, 255, 0.12);
-  --border-glow: rgba(59, 130, 246, 0.3);
+  --border-glow: rgba(59, 130, 246, 0.35);
   --primary: #3b82f6;
   --primary-hover: #2563eb;
   --primary-glow: rgba(59, 130, 246, 0.25);
@@ -29,6 +29,22 @@
   padding: 0;
 }
 
+/* ------------------ شريط التمرير الاحترافي ------------------ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
 body {
   font-family: 'Cairo', system-ui, -apple-system, sans-serif;
   background: var(--bg-gradient);
@@ -42,6 +58,7 @@ body {
   padding: 2rem 1rem;
   overflow-x: hidden;
   position: relative;
+  direction: rtl;
 }
 
 /* ------------------ خلفيات جمالية متحركة ------------------ */
@@ -122,7 +139,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ------------------ نماذج المدخلات ------------------ */
+/* ------------------ نماذج المدخلات القوائم وحقول النص ------------------ */
 .form-group {
   margin-bottom: 1.5rem;
   text-align: right;
@@ -168,43 +185,165 @@ body {
 }
 
 .input-wrapper select,
-.input-wrapper input {
+.input-wrapper input,
+.input-wrapper textarea {
   width: 100%;
-  padding: 0.9rem 1rem 0.9rem 2.8rem;
-  background: rgba(15, 23, 42, 0.7);
+  padding: 0.9rem 2.8rem 0.9rem 1rem;
+  background: rgba(15, 23, 42, 0.85);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--text-main);
   font-family: inherit;
   font-size: 0.98rem;
   outline: none;
   transition: var(--transition);
   appearance: none;
+  -webkit-appearance: none;
 }
 
 .input-wrapper select:focus,
-.input-wrapper input:focus {
+.input-wrapper input:focus,
+.input-wrapper textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--primary-glow);
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+/* إصلاح تنسيق عناصر القوائم المنسدلة (Options) للمتصفحات */
+select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #1e293b !important;
+  color: var(--primary) !important;
+}
+
+/* إصلاح التعبئة التلقائية من المتصفح (Autofill Override) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text-main) !important;
+  -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .input-wrapper i {
   position: absolute;
-  left: 1.1rem;
+  right: 1.1rem;
   color: var(--text-muted);
   pointer-events: none;
   font-size: 1.1rem;
   transition: var(--transition);
 }
 
-.input-wrapper input:focus + i,
-.input-wrapper select:focus + i {
+.input-wrapper input:focus ~ i,
+.input-wrapper select:focus ~ i,
+.input-wrapper textarea:focus ~ i {
   color: var(--primary);
 }
 
 .select-arrow {
   left: 1.1rem !important;
+  right: auto !important;
+}
+
+/* ------------------ تنسيق الإجابات والتحديدات (Answer Cards & Choices) ------------------ */
+.choices-grid, .options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.choice-card, .option-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  transition: var(--transition);
+  user-select: none;
+  position: relative;
+}
+
+.choice-card:hover, .option-box:hover {
+  border-color: var(--border-glow);
+  background: rgba(30, 41, 59, 0.8);
+  transform: translateY(-2px);
+}
+
+.choice-card.selected,
+.choice-card:has(input:checked),
+.option-box.selected,
+.option-box:has(input:checked) {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.choice-card input[type="radio"],
+.choice-card input[type="checkbox"],
+.option-box input[type="radio"],
+.option-box input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--text-muted);
+  border-radius: 50%;
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.choice-card input[type="checkbox"],
+.option-box input[type="checkbox"] {
+  border-radius: 6px;
+}
+
+.choice-card input[type="radio"]:checked,
+.choice-card input[type="checkbox"]:checked,
+.option-box input[type="radio"]:checked,
+.option-box input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.choice-card input[type="radio"]:checked::after,
+.option-box input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background-color: #fff;
+  border-radius: 50%;
+}
+
+.choice-card input[type="checkbox"]:checked::after,
+.option-box input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 /* ------------------ الأزرار والتنبيهات ------------------ */
@@ -428,9 +567,10 @@ body.index-page {
 
 .idx-nav {
   width: 100vw;
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
   border-bottom: 1px solid var(--card-border);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -546,6 +686,7 @@ body.index-page {
   flex-direction: column;
   justify-content: space-between;
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   transition: var(--transition);
 }
 
@@ -896,6 +1037,7 @@ body.index-page {
   border-radius: var(--radius-lg);
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.1);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   position: relative;
   overflow: hidden;
   text-align: center;
