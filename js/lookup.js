@@ -6,7 +6,7 @@ import { supabase } from "../includes/db.js";
    ========================================================== */
 class TrafficQueueManager {
   constructor() {
-    this.maxConcurrentRequests = 2; // الحد الأقصى للطلبات المتزامنة
+    this.maxConcurrentRequests = 2;
     this.activeRequests = 0;
     this.queue = [];
   }
@@ -34,7 +34,7 @@ class TrafficQueueManager {
     this.activeRequests++;
 
     try {
-      await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
+      await new Promise((r) => setTimeout(r, 500 + Math.random() * 300));
       const result = await taskFunction();
       resolve(result);
     } catch (error) {
@@ -49,12 +49,13 @@ class TrafficQueueManager {
 const trafficManager = new TrafficQueueManager();
 
 /* ==========================================================
-   المنطق الأساسي للاستعلام
+   المنطق الأساسي للاستعلام والتحقق من رقم الهاتف
    ========================================================== */
 document.addEventListener("DOMContentLoaded", async () => {
   const examSelect = document.getElementById("examSelect");
   const lookupForm = document.getElementById("lookupForm");
   const phoneInput = document.getElementById("phoneInput");
+  const phoneCounter = document.getElementById("phoneCounter");
   const submitBtn = document.getElementById("submitBtn");
   const lookupError = document.getElementById("lookupError");
   const searchCard = document.getElementById("searchCard");
@@ -66,6 +67,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const urlParams = new URLSearchParams(window.location.search);
   const targetSlug = urlParams.get("slug") || urlParams.get("exam");
+
+  // --- تقييد خانة رقم الهاتف لتقبل 11 رقماً فقط ومنع الأحرف ---
+  if (phoneInput) {
+    phoneInput.addEventListener("input", (e) => {
+      // إزالة أي رموز أو أحرف غير أرقام
+      let cleanVal = e.target.value.replace(/\D/g, "");
+      if (cleanVal.length > 11) {
+        cleanVal = cleanVal.substring(0, 11);
+      }
+      e.target.value = cleanVal;
+
+      // تحديث عدّاد الأرقام
+      if (phoneCounter) {
+        phoneCounter.textContent = `${cleanVal.length}/11`;
+        if (cleanVal.length === 11) {
+          phoneCounter.classList.add("valid");
+        } else {
+          phoneCounter.classList.remove("valid");
+        }
+      }
+    });
+  }
 
   // 1. تحميل قائمة الامتحانات
   try {
@@ -83,10 +106,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   } catch (err) {
     console.error("Error fetching exams:", err);
-    examSelect.innerHTML = `<option value="">خطأ في تحميل الامتحانات</option>`;
+    examSelect.innerHTML = `<option value="">خطأ في تحميل قائمة الامتحانات</option>`;
   }
 
-  // 2. معالجة نموذج الاستعلام عبر طابور الانتظار
+  // 2. معالجة نموذج الاستعلام مع الشروط الصارمة
   lookupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     lookupError.classList.add("hidden");
@@ -94,13 +117,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     const examId = examSelect.value;
     const phone = phoneInput.value.trim();
 
-    if (!examId || !phone) {
-      showError("يرجى اختيار الامتحان وإدخال رقم الهاتف الصحيح.");
+    // التحقق من الاختيارات الأساسية
+    if (!examId) {
+      showError("يرجى اختيار الامتحان من القائمة أولاً.");
+      return;
+    }
+
+    // شرط صارم: يجب أن يكون رقم الهاتف 11 رقماً بالضبط
+    if (!phone || phone.length !== 11) {
+      showError("يرجى إدخال رقم هاتف صحيح يتكون من 11 رقماً بالضبط.");
       return;
     }
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري الاتصال...`;
+    submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>جاري البحث عن النتيجة...</span>`;
 
     const fetchResultTask = async () => {
       const { data, error } = await supabase
@@ -129,8 +159,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       queueModal.classList.remove("active");
 
+      // الشرط الخاص المطلوب بدقة عند عدم وجود نتيجة للرقم
       if (!attempt) {
-        showError("لم يتم العثور على نتيجة مرتبطة بهذا الرقم لهذا الامتحان. تأكد من إدخال الرقم الصحيح.");
+        showError("هذا الرقم لم يدخل أي امتحان للامتحان المختار");
         return;
       }
 
@@ -140,10 +171,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       console.error(err);
       queueModal.classList.remove("active");
-      showError("حدث ضغط غير متوقع أو خطأ بالشبكة، يرجى إعادة المحاولة بعد لحظات.");
+      showError("حدث ضغط غير متوقع على السيرفر أو خطأ بالشبكة، يرجى إعادة المحاولة.");
     } finally {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> استعلام عن النتيجة`;
+      submitBtn.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> <span>استعلام عن النتيجة</span>`;
     }
   });
 
@@ -179,17 +210,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (packages && Object.keys(packages).length > 0) {
       Object.entries(packages).forEach(([category, items]) => {
         const itemsList = (Array.isArray(items) && items.length)
-          ? items.map(it => `<span class="activity-chip">${escapeHtml(it)}</span>`).join("")
+          ? items.map(it => `<span class="activity-chip"><i class="fa-solid fa-check-double"></i> ${escapeHtml(it)}</span>`).join("")
           : `<span class="activity-chip empty">لم يتم التحديد</span>`;
 
         actHtml += `
-          <div style="background: rgba(0,0,0,0.2); padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid var(--border);">
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 700;">${escapeHtml(category)}:</div>
-            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">${itemsList}</div>
+          <div class="activity-block">
+            <div class="activity-cat-title"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(category)}:</div>
+            <div class="activity-chips-wrap">${itemsList}</div>
           </div>`;
       });
     } else {
-      actHtml = `<div style="color: var(--text-muted); font-size: 0.9rem;">لا توجد أنشطة أو ألعاب مسجلة لهذا الطالب.</div>`;
+      actHtml = `<div class="empty-activities"><i class="fa-solid fa-info-circle"></i> لا توجد أنشطة أو ألعاب مسجلة لهذا الطالب.</div>`;
     }
 
     actContainer.innerHTML = actHtml;
