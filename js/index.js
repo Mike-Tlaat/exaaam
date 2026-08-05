@@ -138,3 +138,4 @@ async function renderExams() {
 }
 
 document.addEventListener("DOMContentLoaded", renderExams);
+ 
