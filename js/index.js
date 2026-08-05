@@ -1,5 +1,5 @@
 // إضافة رقم الإصدار للاستدعاء لمنع كاش الدوال المساعدة
-import { getAllExams, updateExamStatus } from "../includes/functions.js?v=1.0.1";
+import { getAllExams, updateExamStatus } from "../includes/functions.js?v=2.0.2";
 
 function escapeHtml(str) {
   const d = document.createElement("div");
