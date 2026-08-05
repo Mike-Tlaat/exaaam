@@ -1,6 +1,6 @@
 // js/exam.js - تسجيل الطالب -> اختيار الأنشطة -> الامتحان المباشر -> التصحيح والتسليم
 
-import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM } from "../includes/config.js?v=6.0.2";
+import { EXAM_DURATION_SECONDS, MAX_ACTIVITIES, SPORTS_TOGGLE_ITEM } from "../includes/config.js?v=2.0.3";
 import {
   getExamBySlug,
   getExamById,
@@ -12,12 +12,12 @@ import {
   savePackageSelections,
   loadQuestions,
   submitExamAttempt,
-} from "../includes/functions.js?v=2.0.2";
+} from "../includes/functions.js?v=2.0.3";
 
 // =======================================
 // آلية التحديث التلقائي للنسخة (Cache Control)
 // =======================================
-const CURRENT_APP_VERSION = "2.0.2";
+const CURRENT_APP_VERSION = "2.0.3";
 (function checkAppVersion() {
   const savedVersion = localStorage.getItem("app_sys_version");
   if (savedVersion !== CURRENT_APP_VERSION) {
@@ -74,7 +74,6 @@ function updatePageTitle(exam) {
 
   document.title = titleText;
 
-  // تحديث الميتا تاج لتظهر الصورة والمعاينة الصحيحة عند المشاركة على واتساب
   let ogTitle = document.querySelector('meta[property="og:title"]');
   if (!ogTitle) {
     ogTitle = document.createElement("meta");
@@ -167,7 +166,6 @@ async function init() {
     return;
   }
 
-  // تحديث عنوان الصفحة فور تحميل الامتحان
   updatePageTitle(currentExam);
 
   const savedId = localStorage.getItem(attemptStorageKey(currentExam.id));
@@ -277,7 +275,8 @@ async function showPackages() {
   const isSecondary = examName.includes("ثانوي") || currentExam?.slug?.includes("thanawi");
   const pkgFile = isShabab ? "pk1.json" : "pk.json";
 
-  const packages = await loadPackages(pkgFile);
+  const pkgFileWithVersion = `${pkgFile}?v=${CURRENT_APP_VERSION}_${Date.now()}`;
+  const packages = await loadPackages(pkgFileWithVersion);
   const container = document.getElementById("packagesContainer");
 
   const activityItems = packages["أنشطة"] || [];
@@ -285,7 +284,6 @@ async function showPackages() {
   const teamItems = packages["اللعب الجماعي"] || [];
 
   if (isShabab) {
-    // امتحان الموضوع الأساسي - شباب
     container.innerHTML = `
       <div class="pkg-card" data-category="أنشطة">
         <div class="pkg-card-title">
@@ -356,8 +354,10 @@ async function showPackages() {
     });
 
   } else {
-    // امتحانات الدرس الأساسي (5 و6، إعدادي، ثانوي، قانا الجليل)
-    let sportsHtml = `
+    const regularActivities = activityItems.filter((item) => item !== SPORTS_TOGGLE_ITEM);
+    const hasSportsToggle = activityItems.includes(SPORTS_TOGGLE_ITEM);
+
+    let sportsCardsHtml = `
       <div class="pkg-card hidden" id="individualCard" data-category="اللعب الفردي">
         <div class="pkg-card-title">
           <h3>اللعب الفردي</h3>
@@ -374,7 +374,7 @@ async function showPackages() {
     `;
 
     if (!isSecondary && teamItems.length) {
-      sportsHtml += `
+      sportsCardsHtml += `
         <div class="pkg-card hidden" id="teamCard" data-category="اللعب الجماعي">
           <div class="pkg-card-title">
             <h3>اللعب الجماعي</h3>
@@ -391,34 +391,51 @@ async function showPackages() {
       <div class="pkg-card" id="activitiesCard" data-category="أنشطة">
         <div class="pkg-card-title">
           <h3>أنشطة</h3>
-          <span class="limit-badge">اختر حتى 3 أنشطة كحد أقصى (المسابقات الرياضية غير محسوبة)</span>
+          <span class="limit-badge">اختر حتى ${MAX_ACTIVITIES} أنشطة كحد أقصى</span>
         </div>
         <div class="pkg-options">
           ${
-            activityItems.length
-              ? activityItems.map((item) => optionHtml("أنشطة", item)).join("")
+            regularActivities.length
+              ? regularActivities.map((item) => optionHtml("أنشطة", item)).join("")
               : `<div class="pkg-empty-note">لا توجد عناصر متاحة حالياً.</div>`
           }
         </div>
       </div>
-      ${sportsHtml}
+
+      ${
+        hasSportsToggle
+          ? `
+      <div class="pkg-card sports-toggle-card" data-category="أنشطة">
+        <div class="pkg-card-title">
+          <h3 class="sports-title"><i class="fa-solid fa-trophy"></i> المسابقات الرياضية</h3>
+          <span class="limit-badge highlight">مفتاح فتح أقسام الألعاب (غير محسوب من الأنشطة)</span>
+        </div>
+        <p class="sports-desc-note">
+          <i class="fa-solid fa-circle-info"></i> تفعيل هذا الخيار لا يخصم من حد الأنشطة الثلاثة، ولكنه يفتح لك إمكانية الاشتراك في أقسام اللعب الفردي والجماعي بالأسفل.
+        </p>
+        <div class="pkg-options">
+          <label class="pkg-option sports-option-highlight">
+            <input type="checkbox" name="أنشطة" value="${SPORTS_TOGGLE_ITEM}" id="sportsToggleCheckbox">
+            <span>الاشتراك في المسابقات الرياضية</span>
+          </label>
+        </div>
+      </div>
+      `
+          : ""
+      }
+
+      ${sportsCardsHtml}
     `;
 
     const activitiesCard = document.getElementById("activitiesCard");
+    const sportsCheckbox = document.getElementById("sportsToggleCheckbox");
     const individualCard = document.getElementById("individualCard");
     const teamCard = document.getElementById("teamCard");
 
-    // أحداث اختيار الأنشطة
     activitiesCard?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
       input.addEventListener("change", (e) => {
-        const sportsInput = activitiesCard.querySelector(`input[value="${SPORTS_TOGGLE_ITEM}"]`);
-        const isSportsChecked = sportsInput ? sportsInput.checked : false;
-
-        // حساب عدد الأنشطة العادية دون احتساب المسابقات الرياضية
-        const regularChecked = Array.from(activitiesCard.querySelectorAll('input[type="checkbox"]:checked'))
-          .filter((i) => i.value !== SPORTS_TOGGLE_ITEM);
-
-        if (regularChecked.length > MAX_ACTIVITIES && e.target.value !== SPORTS_TOGGLE_ITEM) {
+        const checkedCount = activitiesCard.querySelectorAll('input[type="checkbox"]:checked').length;
+        if (checkedCount > MAX_ACTIVITIES) {
           e.target.checked = false;
           e.target.closest(".pkg-option")?.classList.remove("selected-active");
           showModal({
@@ -430,31 +447,34 @@ async function showPackages() {
         } else {
           e.target.closest(".pkg-option")?.classList.toggle("selected-active", e.target.checked);
         }
-
-        // إظهار أو إخفاء أقسام الألعاب عند اختيار/إلغاء المسابقات الرياضية
-        if (isSportsChecked) {
-          individualCard?.classList.remove("hidden");
-          if (!isSecondary && teamCard) teamCard.classList.remove("hidden");
-        } else {
-          if (individualCard) {
-            individualCard.classList.add("hidden");
-            individualCard.querySelectorAll('input[type="checkbox"]').forEach((inp) => {
-              inp.checked = false;
-              inp.closest(".pkg-option")?.classList.remove("selected-active");
-            });
-          }
-          if (teamCard) {
-            teamCard.classList.add("hidden");
-            teamCard.querySelectorAll('input[type="checkbox"]').forEach((inp) => {
-              inp.checked = false;
-              inp.closest(".pkg-option")?.classList.remove("selected-active");
-            });
-          }
-        }
       });
     });
 
-    // أحداث اختيار اللعب الفردي
+    sportsCheckbox?.addEventListener("change", (e) => {
+      const isChecked = e.target.checked;
+      e.target.closest(".pkg-option")?.classList.toggle("selected-active", isChecked);
+
+      if (isChecked) {
+        individualCard?.classList.remove("hidden");
+        if (!isSecondary && teamCard) teamCard.classList.remove("hidden");
+      } else {
+        if (individualCard) {
+          individualCard.classList.add("hidden");
+          individualCard.querySelectorAll('input[type="checkbox"]').forEach((inp) => {
+            inp.checked = false;
+            inp.closest(".pkg-option")?.classList.remove("selected-active");
+          });
+        }
+        if (teamCard) {
+          teamCard.classList.add("hidden");
+          teamCard.querySelectorAll('input[type="checkbox"]').forEach((inp) => {
+            inp.checked = false;
+            inp.closest(".pkg-option")?.classList.remove("selected-active");
+          });
+        }
+      }
+    });
+
     individualCard?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
       input.addEventListener("change", (e) => {
         const checkedInd = Array.from(individualCard.querySelectorAll('input[type="checkbox"]:checked'));
@@ -499,7 +519,6 @@ async function showPackages() {
       });
     });
 
-    // أحداث اختيار اللعب الجماعي
     teamCard?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
       input.addEventListener("change", (e) => {
         const checkedTeam = Array.from(teamCard.querySelectorAll('input[type="checkbox"]:checked'));
@@ -530,7 +549,6 @@ async function showPackages() {
     });
   }
 
-  // زر مراجعة الاختيار والدخول
   const reviewBtn = document.getElementById("reviewPackagesBtn");
   if (reviewBtn) {
     const newReviewBtn = reviewBtn.cloneNode(true);
@@ -601,7 +619,8 @@ async function startExam() {
   const updatedAttempt = await getAttempt(attemptId);
   if (updatedAttempt) currentAttempt = updatedAttempt;
 
-  questions = (await loadQuestions(currentExam.json_file)) || [];
+  const jsonFileWithVersion = `${currentExam.json_file}?v=${CURRENT_APP_VERSION}_${Date.now()}`;
+  questions = (await loadQuestions(jsonFileWithVersion)) || [];
 
   document.getElementById("examTitle").textContent = currentExam.name;
 
@@ -735,15 +754,15 @@ function isQuestionAnswered(questionObj, value) {
   if (type === "fill_in_the_blank") {
     const segments = String(questionObj.question).split(/\.{3,}/u);
     const expectedBlanks = Math.max(segments.length - 1, 1);
-    
+
     if (!Array.isArray(value) || value.length < expectedBlanks) return false;
-    
+
     for (let i = 0; i < expectedBlanks; i++) {
       if (String(value[i] ?? "").trim() === "") return false;
     }
     return true;
   }
-  
+
   return value !== undefined && !Array.isArray(value) && String(value ?? "").trim() !== "";
 }
 
@@ -864,7 +883,7 @@ async function submitExam(isTimeOut) {
   isSubmittingLock = true;
 
   if (timerInterval) clearInterval(timerInterval);
-  
+
   const submitBtn = document.getElementById("submitExamBtn");
   const errorBox = document.getElementById("submitErrorBox");
 
@@ -912,7 +931,7 @@ async function submitExam(isTimeOut) {
     localStorage.removeItem(answersStorageKey());
     localStorage.removeItem(attemptStorageKey(currentExam.id));
     localStorage.removeItem(`timer_start_ms_${attemptId}`);
-    
+
     window.location.href = `results.html?attempt=${attemptId}`;
   } else {
     isSubmittingLock = false;
@@ -920,7 +939,7 @@ async function submitExam(isTimeOut) {
       submitBtn.disabled = false;
       submitBtn.textContent = "🔄 إعادة محاولة التسليم الآن";
     }
-    
+
     if (errorBox) {
       errorBox.textContent = "⚠️ يوجد ضغط شديد جداً على الشبكة، ولكن إجاباتك محفوظة بأمان على جهازك! انقر على زر 'إعادة محاولة التسليم' بالأسفل.";
       errorBox.classList.remove("hidden");
