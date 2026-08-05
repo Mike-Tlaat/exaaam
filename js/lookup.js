@@ -30,12 +30,10 @@ class TrafficQueueManager {
       }
     });
 
-    // سحب الطلب الأول
     const { taskFunction, resolve, reject } = this.queue.shift();
     this.activeRequests++;
 
     try {
-      // إدخال تأخير زمني بسيط لت توزيع الأحمال (Throttle Rate Limit)
       await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
       const result = await taskFunction();
       resolve(result);
@@ -66,7 +64,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const queuePosition = document.getElementById("queuePosition");
   const queueProgress = document.getElementById("queueProgress");
 
-  // قراءة معلمات الرابط (URL Parameters) إذا كان الرابط مخصصاً لامتحان معين
   const urlParams = new URLSearchParams(window.location.search);
   const targetSlug = urlParams.get("slug") || urlParams.get("exam");
 
@@ -89,7 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     examSelect.innerHTML = `<option value="">خطأ في تحميل الامتحانات</option>`;
   }
 
-  // 2. معالجة تقديم نموذج الاستعلام مع هندسة الضغط
+  // 2. معالجة نموذج الاستعلام عبر طابور الانتظار
   lookupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     lookupError.classList.add("hidden");
@@ -105,7 +102,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     submitBtn.disabled = true;
     submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري الاتصال...`;
 
-    // دالة تنفيذ البحث في قاعدة البيانات
     const fetchResultTask = async () => {
       const { data, error } = await supabase
         .from("attempts")
@@ -122,7 +118,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     try {
-      // إرسال الطلب عبر طابور الانتظار
       const attempt = await trafficManager.enqueue(fetchResultTask, (pos, total) => {
         if (pos > 1) {
           queueModal.classList.add("active");
@@ -139,7 +134,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      // جلب أنشطة وألعاب الطالب
       const packages = await getPackageSelections(attempt.id);
       renderResultCard(attempt, packages);
 
@@ -153,7 +147,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // 3. عرض نتائج الطالب
+  // 3. عرض النتيجة والأنشطة
   function renderResultCard(attempt, packages) {
     document.getElementById("resStudentName").textContent = attempt.user_name || "بدون اسم";
     document.getElementById("resPhone").textContent = attempt.user_phone;
@@ -179,21 +173,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       passPill.innerHTML = `<i class="fa-solid fa-xmark"></i> غير ناجح`;
     }
 
-    // بناء قائمة الأنشطة
     const actContainer = document.getElementById("activitiesContainer");
     let actHtml = "";
 
-    Object.entries(packages).forEach(([category, items]) => {
-      const itemsList = items.length
-        ? items.map(it => `<span class="activity-chip">${escapeHtml(it)}</span>`).join("")
-        : `<span class="activity-chip empty">لم يتم التحديد</span>`;
+    if (packages && Object.keys(packages).length > 0) {
+      Object.entries(packages).forEach(([category, items]) => {
+        const itemsList = (Array.isArray(items) && items.length)
+          ? items.map(it => `<span class="activity-chip">${escapeHtml(it)}</span>`).join("")
+          : `<span class="activity-chip empty">لم يتم التحديد</span>`;
 
-      actHtml += `
-        <div style="background: rgba(0,0,0,0.2); padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid var(--border);">
-          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 700;">${escapeHtml(category)}:</div>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">${itemsList}</div>
-        </div>`;
-    });
+        actHtml += `
+          <div style="background: rgba(0,0,0,0.2); padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 700;">${escapeHtml(category)}:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">${itemsList}</div>
+          </div>`;
+      });
+    } else {
+      actHtml = `<div style="color: var(--text-muted); font-size: 0.9rem;">لا توجد أنشطة أو ألعاب مسجلة لهذا الطالب.</div>`;
+    }
 
     actContainer.innerHTML = actHtml;
 
