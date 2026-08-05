@@ -4,14 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>منصة الامتحانات - الاستعلام عن النتيجة</title>
+  
+  <!-- الخطوط والأيقونات -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Roboto:wght@500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  
+  <!-- ملف التنسيقات الخاص بك -->
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="results-page">
 
+  <!-- خلفية جمالية متحركة -->
+  <div class="bg-glow-orb orb-1"></div>
+  <div class="bg-glow-orb orb-2"></div>
+
   <div class="auth-container">
-    <!-- كارت نموذج الاستعلام -->
+    
+    <!-- ==================== 1. كارت نموذج الاستعلام ==================== -->
     <div class="auth-card" id="searchCard">
       <div class="auth-header">
         <div class="icon-header-badge">
@@ -22,6 +31,7 @@
       </div>
 
       <form id="lookupForm" novalidate>
+        <!-- قائمة الامتحانات -->
         <div class="form-group">
           <label for="examSelect"><i class="fa-solid fa-book-open"></i> اختر الامتحان:</label>
           <div class="input-wrapper">
@@ -32,6 +42,7 @@
           </div>
         </div>
 
+        <!-- رقم الهاتف -->
         <div class="form-group">
           <div class="label-row">
             <label for="phoneInput"><i class="fa-solid fa-mobile-screen-button"></i> رقم الهاتف (11 رقم):</label>
@@ -53,16 +64,18 @@
           </div>
         </div>
 
+        <!-- زر الاستعلام -->
         <button type="submit" class="btn-submit" id="submitBtn">
           <i class="fa-solid fa-magnifying-glass"></i>
           <span>استعلام عن النتيجة</span>
         </button>
       </form>
 
+      <!-- تنبيه أخطاء الإدخال العادية -->
       <div id="lookupError" class="error-alert hidden"></div>
     </div>
 
-    <!-- كارت عرض النتيجة -->
+    <!-- ==================== 2. كارت عرض النتيجة ==================== -->
     <div class="result-card hidden" id="resultCard">
       <div class="result-header">
         <div id="statusIcon" class="result-icon"></div>
@@ -70,7 +83,7 @@
         <div id="resPassPill" class="status-pill"></div>
       </div>
 
-      <!-- شبكة البيانات الأساسية -->
+      <!-- شبكة البيانات الأساسية المنسقة -->
       <div class="stats-grid">
         <div class="stat-box">
           <div class="label"><i class="fa-solid fa-phone"></i> رقم الهاتف</div>
@@ -80,11 +93,11 @@
           <div class="label"><i class="fa-solid fa-church"></i> الكنيسة / المنطقة</div>
           <div class="value" id="resChurch"></div>
         </div>
-        <div class="stat-box">
+        <div class="stat-box highlight-box">
           <div class="label"><i class="fa-solid fa-award"></i> المجموع والدرجة</div>
           <div class="value primary-highlight" id="resScore"></div>
         </div>
-        <div class="stat-box">
+        <div class="stat-box highlight-box">
           <div class="label"><i class="fa-solid fa-star"></i> التقدير النهائي</div>
           <div class="value" id="resGrade"></div>
         </div>
@@ -98,13 +111,67 @@
         <div id="activitiesContainer" class="activities-container"></div>
       </div>
 
+      <!-- زر العودة -->
       <button type="button" class="btn-submit btn-secondary" id="backBtn">
         <i class="fa-solid fa-arrow-right"></i>
         <span>استعلام عن نتيجة أخرى</span>
       </button>
     </div>
 
-    <!-- شاشة طابور الانتظار (Traffic Queue Control) -->
+    <!-- ==================== 3. مودال عدم وجود الرقم وموعد الإعادة ==================== -->
+    <div id="notFoundModal" class="custom-modal-overlay">
+      <div class="custom-modal-box not-found-card">
+        <button type="button" class="modal-close-btn" id="closeNotFoundBtn" aria-label="إغلاق">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="modal-icon-wrapper warning-badge">
+          <i class="fa-solid fa-calendar-xmark fa-bounce"></i>
+        </div>
+
+        <h3 class="modal-title">الرقم غير مسجل بالامتحان المختار</h3>
+        <p class="modal-text-desc">
+          عذراً، هذا الرقم ليس له نتيجة مسجلة في هذا الامتحان المحدد. يرجى التأكد من اختيار الامتحان الصحيح أو التأكد من رقم الهاتف.
+        </p>
+
+        <!-- كارت تفاصيل الإعادة المخصص بوضوح -->
+        <div class="re-exam-notice-box">
+          <div class="notice-header">
+            <i class="fa-solid fa-bell"></i>
+            <span>مواعيد إعادة الامتحان</span>
+          </div>
+
+          <div class="notice-grid">
+            <div class="notice-item">
+              <i class="fa-solid fa-calendar-day"></i>
+              <div class="info">
+                <span class="lbl">تاريخ الإعادة</span>
+                <span class="val">الجمعة 7 أغسطس (7 / 8)</span>
+              </div>
+            </div>
+
+            <div class="notice-item">
+              <i class="fa-solid fa-clock"></i>
+              <div class="info">
+                <span class="lbl">الموعد المحدد</span>
+                <span class="val">الساعة 1:00 مساءً</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="notice-footer-text">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>ملاحظة: هذه الإعادة مخصصة لجميع الأشخاص الذين لم يؤدوا الامتحان.</span>
+          </div>
+        </div>
+
+        <button type="button" class="btn-submit btn-modal-close" id="ackNotFoundBtn">
+          <span>فهمت ذلك، حسناً</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== 4. مودال طابور الانتظار (Traffic Queue) ==================== -->
     <div id="queueModal" class="custom-modal-overlay">
       <div class="custom-modal-box">
         <div class="modal-icon-wrapper warning-type">
@@ -124,7 +191,7 @@
       </div>
     </div>
 
-    <!-- توقيع المطور الاحترافي (Mike Talaat) -->
+    <!-- ==================== 5. توقيع المطور (Mike Talaat) ==================== -->
     <div class="dev-brand-card">
       <div class="dev-brand-content">
         <span class="dev-tech-tag"><i class="fa-solid fa-code"></i> ENGINEERED BY</span>
@@ -132,6 +199,7 @@
         <p class="dev-subtext">Full-Stack System Architecture</p>
       </div>
     </div>
+
   </div>
 
   <script type="module" src="js/lookup.js"></script>
